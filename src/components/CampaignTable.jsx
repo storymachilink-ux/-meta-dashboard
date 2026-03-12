@@ -29,6 +29,31 @@ export default function CampaignTable({ onSelectCampaign }) {
     else { setSortKey(key); setSortDir('desc'); setPage(0); }
   };
 
+  const exportCSV = () => {
+    const headers = ['Campanha', 'Conta', 'Objetivo', 'Gasto (R$)', 'Impressões', 'Cliques', 'CTR (%)', 'CPC (R$)', 'CPM (R$)', 'Frequência', 'ROAS', 'Compras', 'Score'];
+    const rows = sorted.map(c => [
+      `"${(c.name || '').replace(/"/g, '""')}"`,
+      `"${(c.account || '').replace(/"/g, '""')}"`,
+      `"${(c.objective || '').replace(/"/g, '""')}"`,
+      c.spend?.toFixed(2) ?? 0,
+      c.impressions ?? 0,
+      c.clicks ?? 0,
+      c.ctr?.toFixed(2) ?? 0,
+      c.cpc?.toFixed(2) ?? 0,
+      c.cpm?.toFixed(2) ?? 0,
+      c.frequency?.toFixed(2) ?? 0,
+      c.roas?.toFixed(2) ?? 0,
+      c.purchases ?? 0,
+      c.score ?? 0,
+    ].join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `campanhas_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   const COLS = [
     { key: '_pin',       label: '',                    w: 36,  sortable: false },
     { key: 'name',       label: t.table.campaign,      w: 220 },
@@ -124,6 +149,17 @@ export default function CampaignTable({ onSelectCampaign }) {
         <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
           {t.campaigns_count(sorted.length)}
         </span>
+        <button onClick={exportCSV} style={{
+          padding: '8px 14px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border-input)',
+          background: 'var(--bg-input)', color: 'var(--text-secondary)',
+          cursor: 'pointer', fontSize: '12px', fontWeight: 600,
+          display: 'flex', gap: 6, alignItems: 'center', transition: 'all var(--t-fast)', whiteSpace: 'nowrap',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--success)'; e.currentTarget.style.color = 'var(--success)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-input)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+        >
+          ↓ Exportar CSV
+        </button>
       </div>
 
       {/* Table */}

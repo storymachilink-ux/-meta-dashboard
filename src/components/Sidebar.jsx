@@ -56,6 +56,11 @@ const IconFileText = () => (
     <line x1="16" y1="17" x2="8" y2="17"/>
   </svg>
 );
+const IconZap = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </svg>
+);
 const IconPin = () => (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none">
     <path d="M12 2l2.4 6H21l-5.4 4 2.1 6.5L12 15l-5.7 3.5L8.4 12 3 8h6.6L12 2z"/>
@@ -73,18 +78,20 @@ const IconChevronRight = () => (
 );
 
 const NAV_ITEMS = [
-  { id: 'overview',     label_pt: 'Visão Geral',    label_en: 'Overview',     Icon: IconGrid },
-  { id: 'campaigns',    label_pt: 'Campanhas',       label_en: 'Campaigns',    Icon: IconList },
-  { id: 'charts',       label_pt: 'Gráficos',        label_en: 'Charts',       Icon: IconBarChart },
-  { id: 'conversions',  label_pt: 'Conversões',      label_en: 'Conversions',  Icon: IconTarget },
-  { id: 'alerts',       label_pt: 'Alertas',         label_en: 'Alerts',       Icon: IconBell, badge: true },
-  { id: 'audience',     label_pt: 'Público',         label_en: 'Audience',     Icon: IconUsers },
-  { id: 'devices',      label_pt: 'Dispositivos',    label_en: 'Devices',      Icon: IconMonitor },
-  { id: 'reports',      label_pt: 'Relatórios',      label_en: 'Reports',      Icon: IconFileText },
+  { id: 'overview',         label_pt: 'Visão Geral',      label_en: 'Overview',         Icon: IconGrid },
+  { id: 'campaigns',        label_pt: 'Campanhas',         label_en: 'Campaigns',        Icon: IconList },
+  { id: 'charts',           label_pt: 'Gráficos',          label_en: 'Charts',           Icon: IconBarChart },
+  { id: 'conversions',      label_pt: 'Conversões',        label_en: 'Conversions',      Icon: IconTarget },
+  { id: 'alerts',           label_pt: 'Alertas',           label_en: 'Alerts',           Icon: IconBell, badge: true },
+  { id: 'recommendations',  label_pt: 'Recomendações',     label_en: 'Recommendations',  Icon: IconZap, recBadge: true },
+  { id: 'audience',         label_pt: 'Público',           label_en: 'Audience',         Icon: IconUsers },
+  { id: 'devices',          label_pt: 'Dispositivos',      label_en: 'Devices',          Icon: IconMonitor },
+  { id: 'reports',          label_pt: 'Relatórios',        label_en: 'Reports',          Icon: IconFileText },
 ];
 
 export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSelectedCampaign, alertCount }) {
-  const { t, lang, pinnedIds, allCampaigns, togglePin } = useApp();
+  const { t, lang, pinnedIds, allCampaigns, togglePin, recommendations } = useApp();
+  const recCount = recommendations?.filter(r => !r.applied).length || 0;
   const pinnedCampaigns = allCampaigns.filter(c => pinnedIds.has(c.id));
 
   const handleNav = (id) => {
@@ -185,6 +192,15 @@ export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSel
                     borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
                     padding: '0 3px', lineHeight: 1, border: '1.5px solid var(--bg-sidebar)',
                   }}>{alertCount > 99 ? '99+' : alertCount}</span>
+                )}
+              {item.recBadge && recCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -5, right: -7,
+                    background: '#818cf8', color: 'white',
+                    fontSize: '9px', fontWeight: 800, minWidth: 15, height: 15,
+                    borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 3px', lineHeight: 1, border: '1.5px solid var(--bg-sidebar)',
+                  }}>{recCount > 99 ? '99+' : recCount}</span>
                 )}
               </span>
 

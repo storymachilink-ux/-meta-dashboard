@@ -362,6 +362,51 @@ app.get('/api/sync/status', async (req, res) => {
 })
 
 // ============================================================
+// POST /api/ai/ask — Analista IA com Claude
+// ============================================================
+app.post('/api/ai/ask', async (req, res) => {
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
+  const { query, context } = req.body || {}
+  if (!query) return res.status(400).json({ error: 'query obrigatória' })
+
+  if (!ANTHROPIC_KEY) {
+    return res.json({
+      icon: '⚠️',
+      headline: 'IA não configurada',
+      body: ['Configure ANTHROPIC_API_KEY no Render para ativar o Analista IA com Claude.'],
+    })
+  }
+
+  try {
+    const contextStr = context ? JSON.stringify(context, null, 0) : '{}'
+    const systemPrompt = `Você é um analista sênior de tráfego pago especialista em Meta Ads.
+Responda em português brasileiro. Seja direto, prático e orientado a resultados.
+Use **negrito** para destacar campanhas, valores e métricas importantes.
+Forneça recomendações concretas e acionáveis. Máximo 8 linhas.`
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 800,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: `Dados: ${contextStr}\n\nPergunta: ${query}` }],
+      }),
+    })
+
+    if (!response.ok) throw new Error(`Anthropic ${response.status}`)
+    const data = await response.json()
+    const text = data.content?.[0]?.text || 'Sem resposta.'
+    const lines = text.split('\n').filter(l => l.trim())
+    res.json({ icon: '✦', headline: lines[0] || 'Análise', body: lines.slice(1) })
+  } catch (err) {
+    console.error('[AI]', err.message)
+    res.status(500).json({ icon: '⚠️', headline: 'Erro ao consultar IA', body: ['Usando análise local como fallback.'] })
+  }
+})
+
+// ============================================================
 // SPA fallback
 // ============================================================
 app.use((req, res) => {

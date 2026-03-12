@@ -128,16 +128,14 @@ export default function SearchBar() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory, typing]);
 
-  const submit = (q) => {
+  const submit = async (q) => {
     const query = (typeof q === 'string' ? q : input).trim();
     if (!query) return;
     setInput('');
     setTyping(true);
-    setTimeout(() => {
-      handleAsk(query);
-      setTyping(false);
-      setTimeout(() => inputRef.current?.focus(), 80);
-    }, 500);
+    await handleAsk(query);
+    setTyping(false);
+    setTimeout(() => inputRef.current?.focus(), 80);
   };
 
   const clear = () => setChatHistory([]);

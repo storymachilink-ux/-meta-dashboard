@@ -99,6 +99,12 @@ const IconMail = () => (
     <polyline points="22,6 12,13 2,6"/>
   </svg>
 );
+const IconSettings = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+);
 
 /* ── Shared input style ── */
 const inputStyle = {
@@ -125,6 +131,37 @@ export default function TopBar({ lang, setLang, tab, selectedCampaign, setSelect
   const [customStart, setCustomStart] = useState(customDateStart || '');
   const [customEnd, setCustomEnd] = useState(customDateEnd || TODAY);
   const dropRef = useRef(null);
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [tokenStatus, setTokenStatus] = useState(null); // null | 'saving' | 'ok' | 'error'
+  const settingsRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (settingsRef.current && !settingsRef.current.contains(e.target)) setSettingsOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const saveToken = async () => {
+    if (!tokenInput.trim()) return;
+    setTokenStatus('saving');
+    try {
+      const res = await fetch('/api/admin/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro');
+      setTokenStatus('ok');
+      setTokenInput('');
+      setTimeout(() => setTokenStatus(null), 3000);
+    } catch (err) {
+      setTokenStatus('error');
+      setTimeout(() => setTokenStatus(null), 3000);
+    }
+  };
 
   useEffect(() => {
     const handler = (e) => { if (dropRef.current && !dropRef.current.contains(e.target)) setOpen(false); };
@@ -340,6 +377,72 @@ export default function TopBar({ lang, setLang, tab, selectedCampaign, setSelect
               transition: 'all var(--t-fast)',
             }}>{label}</button>
           ))}
+        </div>
+
+        {/* Settings (token) */}
+        <div style={{ position: 'relative' }} ref={settingsRef}>
+          <button
+            onClick={() => { setSettingsOpen(p => !p); setTokenStatus(null); }}
+            title="Configurações"
+            style={{
+              width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: settingsOpen ? 'var(--accent-soft)' : 'var(--bg-subtle)',
+              border: `1px solid ${settingsOpen ? 'var(--accent-border)' : 'var(--border)'}`,
+              borderRadius: 'var(--r-sm)', cursor: 'pointer',
+              color: settingsOpen ? 'var(--accent)' : 'var(--text-secondary)',
+              transition: 'all var(--t-fast)',
+            }}
+            onMouseEnter={e => { if (!settingsOpen) { e.currentTarget.style.borderColor = 'var(--accent-border)'; e.currentTarget.style.color = 'var(--accent)'; } }}
+            onMouseLeave={e => { if (!settingsOpen) { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+          >
+            <IconSettings />
+          </button>
+
+          {settingsOpen && (
+            <div className="dropdown-animate" style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-popup)',
+              padding: '16px', zIndex: 300, minWidth: 300,
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
+                Configurações
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 14 }}>
+                Atualizar token da Meta API sem redeploy
+              </div>
+
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+                Token Meta API
+              </div>
+              <input
+                type="password"
+                value={tokenInput}
+                onChange={e => setTokenInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveToken()}
+                placeholder="EAAxxxxx... (novo token)"
+                style={{ ...inputStyle, width: '100%', marginBottom: 10, fontFamily: 'monospace', fontSize: '12px' }}
+              />
+              <button
+                onClick={saveToken}
+                disabled={!tokenInput.trim() || tokenStatus === 'saving'}
+                style={{
+                  width: '100%', padding: '9px', border: 'none', borderRadius: 'var(--r-md)',
+                  background: tokenStatus === 'ok' ? 'var(--success)' : tokenStatus === 'error' ? 'var(--danger)' : (!tokenInput.trim() || tokenStatus === 'saving') ? 'var(--bg-subtle)' : 'var(--accent)',
+                  color: (!tokenInput.trim() && tokenStatus !== 'ok' && tokenStatus !== 'error') ? 'var(--text-disabled)' : 'white',
+                  fontSize: '13px', fontWeight: 700, cursor: (!tokenInput.trim() || tokenStatus === 'saving') ? 'default' : 'pointer',
+                  transition: 'all var(--t-fast)',
+                }}
+              >
+                {tokenStatus === 'saving' ? 'Salvando…' : tokenStatus === 'ok' ? '✓ Token atualizado!' : tokenStatus === 'error' ? '✕ Erro ao salvar' : 'Salvar Token'}
+              </button>
+
+              <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--bg-subtle)', borderRadius: 'var(--r-sm)', fontSize: '10.5px', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }}>
+                O token é aplicado imediatamente em memória. Não persiste após reinício do servidor.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dark mode toggle */}

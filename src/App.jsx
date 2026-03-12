@@ -18,6 +18,7 @@ import CampaignDetail from './components/CampaignDetail.jsx';
 import TimeSeriesChart from './components/TimeSeriesChart.jsx';
 import ConversionsPage from './components/ConversionsPage.jsx';
 import AlertsPage from './components/AlertsPage.jsx';
+import RecommendationsPage from './components/RecommendationsPage.jsx';
 
 
 const DAY_PRESETS = [3, 5, 7, 12, 15, 20, 30, 60, 90];
@@ -204,13 +205,32 @@ export default function App() {
     return [...new Set(allCampaigns.map(c => c.objective).filter(Boolean))];
   }, [allCampaigns]);
 
-  const handleAsk = (query) => {
-    const answer = buildAnswer(query, { filteredCampaigns, filteredDaily, summary, days: effectiveDays, adsData, adsetsData });
-    setChatHistory(prev => [
-      ...prev,
-      { role: 'user', text: query },
-      { role: 'ai', ...answer },
-    ]);
+  const handleAsk = async (query) => {
+    setChatHistory(prev => [...prev, { role: 'user', text: query }]);
+    try {
+      const aiContext = {
+        totalSpend: summary.totalSpend, totalPurchases: summary.totalPurchases,
+        avgROAS: summary.avgROAS, avgCTR: summary.avgCTR, avgCPC: summary.avgCPC,
+        days: effectiveDays,
+        topCampaigns: filteredCampaigns.slice(0, 15).map(c => ({
+          name: c.name, spend: c.spend, roas: c.roas, ctr: c.ctr, cpc: c.cpc,
+          purchases: c.purchases, frequency: c.frequency, objective: c.objective,
+        })),
+        alerts: alertsHook.alerts?.slice(0, 10).map(a => ({ type: a.type, entity: a.entity_name, msg: a.message })) || [],
+        recommendations: recsHook.recommendations?.slice(0, 10).map(r => ({ action: r.action, entity: r.entity_name, msg: r.message })) || [],
+      };
+      const res = await fetch('/api/ai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, context: aiContext }),
+      });
+      if (!res.ok) throw new Error('AI unavailable');
+      const answer = await res.json();
+      setChatHistory(prev => [...prev, { role: 'ai', ...answer }]);
+    } catch {
+      const answer = buildAnswer(query, { filteredCampaigns, filteredDaily, summary, days: effectiveDays, adsData, adsetsData });
+      setChatHistory(prev => [...prev, { role: 'ai', ...answer }]);
+    }
   };
 
   const ctx = {
@@ -294,6 +314,8 @@ export default function App() {
               <ConversionsPage onSelectCampaign={setSelectedCampaign} />
             ) : tab === 'alerts' ? (
               <AlertsPage />
+            ) : tab === 'recommendations' ? (
+              <RecommendationsPage onSelectCampaign={setSelectedCampaign} />
             ) : (
               <ComingSoon tab={tab} t={t} />
             )}

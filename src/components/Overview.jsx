@@ -5,7 +5,8 @@ import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import PeriodPills from './PeriodPills.jsx';
 
 export default function Overview({ onSelectCampaign }) {
-  const { t, summary, filteredCampaigns, filteredDaily, days, periodMetrics } = useApp();
+  const { t, summary, filteredCampaigns, filteredDaily, days, periodMetrics,
+    scaleRecs, pauseRecs, testRecs, recsLoading } = useApp();
 
   const { totalSpend, totalImpressions, totalClicks, avgCTR, avgCPC, avgCPM,
     totalPurchases, totalRevenue, avgROAS, totalReach, totalEngagement } = summary;
@@ -158,8 +159,22 @@ export default function Overview({ onSelectCampaign }) {
         <RankCard title={`🔁 ${t.highFreq}`}  items={highFreq}  field="frequency" fmt={(v) => v.toFixed(2) + 'x'}      onSelect={onSelectCampaign} negative />
       </div>
 
-      {/* Priority actions */}
-      {priorities.length > 0 && (
+      {/* Decision Panel — DB recs or computed priorities */}
+      {(scaleRecs?.length > 0 || pauseRecs?.length > 0 || testRecs?.length > 0) ? (
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>🎯 Painel de Decisão</div>
+            <span style={{ fontSize: '11px', color: 'var(--accent)', background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', borderRadius: 999, padding: '3px 10px', fontWeight: 600 }}>
+              IA · Banco de dados
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <DecisionCol icon="🚀" label="Escalar" color="#10b981" bg="var(--success-soft)" border="var(--success)" recs={scaleRecs} campaigns={filteredCampaigns} onSelect={onSelectCampaign} />
+            <DecisionCol icon="⏸" label="Pausar" color="var(--danger)" bg="var(--danger-soft)" border="var(--danger)" recs={pauseRecs} campaigns={filteredCampaigns} onSelect={onSelectCampaign} />
+            <DecisionCol icon="🔬" label="Testar Criativo" color="var(--warning)" bg="var(--warning-soft)" border="var(--warning)" recs={testRecs} campaigns={filteredCampaigns} onSelect={onSelectCampaign} />
+          </div>
+        </div>
+      ) : priorities.length > 0 ? (
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>🚨 {t.priorities}</div>
@@ -187,7 +202,7 @@ export default function Overview({ onSelectCampaign }) {
             ))}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -258,6 +273,54 @@ function EmptyState({ text }) {
 
 function SectionTitle({ children }) {
   return <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, letterSpacing: '-0.1px' }}>{children}</div>;
+}
+
+function DecisionCol({ icon, label, color, bg, border, recs, campaigns, onSelect }) {
+  if (!recs?.length) return (
+    <div style={{ borderRadius: 'var(--r-md)', border: `1px dashed ${border}`, padding: '16px', opacity: 0.45, textAlign: 'center' }}>
+      <div style={{ fontSize: '22px', marginBottom: 6 }}>{icon}</div>
+      <div style={{ fontSize: '12px', fontWeight: 700, color }}>{label}</div>
+      <div style={{ fontSize: '11px', color: 'var(--text-disabled)', marginTop: 4 }}>Nenhuma agora</div>
+    </div>
+  );
+  return (
+    <div style={{ borderRadius: 'var(--r-md)', border: `1px solid ${border}`, background: bg, padding: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+        <span style={{ fontSize: '16px' }}>{icon}</span>
+        <span style={{ fontSize: '12px', fontWeight: 700, color }}>{label}</span>
+        <span style={{ marginLeft: 'auto', background: color, color: 'white', fontSize: '10px', fontWeight: 800, borderRadius: 99, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>{recs.length}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {recs.slice(0, 4).map((r, i) => {
+          const camp = campaigns.find(c => c.id === r.entity_id || c.name === r.entity_name);
+          return (
+            <div key={i} onClick={() => camp && onSelect(camp)}
+              style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '8px 10px', cursor: camp ? 'pointer' : 'default', transition: 'all var(--t-fast)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => { if (camp) { e.currentTarget.style.borderColor = border; e.currentTarget.style.transform = 'translateY(-1px)'; }}}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <div style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+                {r.entity_name || '—'}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                {r.message || r.reason || '—'}
+              </div>
+              {r.metric_value != null && (
+                <div style={{ fontSize: '10.5px', color, fontWeight: 700, marginTop: 4 }}>
+                  Valor: {typeof r.metric_value === 'number' ? r.metric_value.toFixed(2) : r.metric_value}
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {recs.length > 4 && (
+          <div style={{ fontSize: '11px', color, textAlign: 'center', fontWeight: 600, padding: '4px 0' }}>
+            +{recs.length - 4} mais
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 const card = {
