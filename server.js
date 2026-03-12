@@ -330,6 +330,27 @@ app.get('/api/recommendations', (req, res) => {
 })
 
 // ============================================================
+// GET /api/ads — lista ads com thumbnails de criativos
+// ============================================================
+app.get('/api/ads', async (req, res) => {
+  const { campaign_id } = req.query
+  if (!campaign_id) return res.status(400).json({ error: 'campaign_id é obrigatório' })
+  if (!TOKEN)       return res.status(503).json({ error: 'META_TOKEN não configurado' })
+
+  try {
+    const url = `${BASE}/${campaign_id}/ads`
+      + `?fields=id,name,status,creative{thumbnail_url,image_url,title,body}`
+      + `&limit=20&access_token=${TOKEN}`
+    const resp = await fetch(url)
+    const json = await resp.json()
+    if (json.error) return res.status(400).json({ error: json.error.message })
+    res.json(json.data || [])
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// ============================================================
 // POST /api/sync/rules
 // Dispara motor de regras manualmente
 // ============================================================

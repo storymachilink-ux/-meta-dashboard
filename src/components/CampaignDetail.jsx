@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { fmtBRL, fmtInt, fmtPct, fmt, scoreColor, getRecommendations, calcScore } from '../utils.js';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import CampaignCreatives from './CampaignCreatives.jsx';
 
 const OBJ_LABELS = { OUTCOME_SALES: 'Vendas', OUTCOME_ENGAGEMENT: 'Engajamento', OUTCOME_AWARENESS: 'Reconhecimento', LINK_CLICKS: 'Cliques' };
 const OBJ_COLORS = { OUTCOME_SALES: '#10b981', OUTCOME_ENGAGEMENT: '#6366f1', OUTCOME_AWARENESS: '#f59e0b', LINK_CLICKS: '#0ea5e9' };
@@ -158,6 +159,9 @@ export default function CampaignDetail({ campaign: c, onBack }) {
         TODAY={TODAY}
         yesterday={yesterday}
       />
+
+      {/* Creative previews */}
+      <CampaignCreatives campaignId={c.id} />
     </div>
   );
 }

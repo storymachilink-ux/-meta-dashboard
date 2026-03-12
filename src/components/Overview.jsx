@@ -167,7 +167,7 @@ export default function Overview({ onSelectCampaign }) {
               <span className="live-dot" />
               <span style={{ fontSize: '15px', fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>Painel de Decisão</span>
               <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
-                · {(scaleRecs?.length || 0) + (pauseRecs?.length || 0) + (testRecs?.length || 0)} ações pendentes
+                · {(scaleRecs?.length || 0) + (pauseRecs?.length || 0) + (testRecs?.length || 0)} ações · últimos {periodLabel}
               </span>
             </div>
             <span style={{ fontSize: '11px', color: '#818cf8', background: 'rgba(129,140,248,0.15)', border: '1px solid rgba(129,140,248,0.28)', borderRadius: 999, padding: '3px 10px', fontWeight: 700, letterSpacing: '0.02em' }}>
@@ -316,6 +316,11 @@ function DecisionCol({ icon, label, color, bg, border, recs, campaigns, onSelect
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: (r.message || r.reason) ? 5 : 0 }}>
                 {camp && camp.spend > 0 && (
                   <span style={{ fontSize: '10px', fontWeight: 700, color, background: color + '15', padding: '1px 7px', borderRadius: 99 }}>{fmtBRL(camp.spend)}</span>
+                )}
+                {camp && camp.purchases > 0 && (
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#10b981', background: '#10b98115', padding: '1px 7px', borderRadius: 99 }}>
+                    {camp.purchases} vendas
+                  </span>
                 )}
                 {camp && camp.roas > 0 && (
                   <span style={{ fontSize: '10px', fontWeight: 700, color: camp.roas >= 3 ? '#10b981' : camp.roas >= 1.5 ? '#f59e0b' : '#ef4444', background: (camp.roas >= 3 ? '#10b981' : camp.roas >= 1.5 ? '#f59e0b' : '#ef4444') + '15', padding: '1px 7px', borderRadius: 99 }}>

@@ -86,6 +86,7 @@ async function computeScores(supabase, tenantId, accountId, config) {
     const totalRev   = rows.reduce((s, r) => s + ((r.roas || 0) * (r.spend || 0)), 0)
     const avgRoas    = totalSpend > 0 ? totalRev / totalSpend : 0
     const avgCtr     = rows.reduce((s, r) => s + (r.ctr || 0), 0) / rows.length
+    const avgCpm     = rows.reduce((s, r) => s + (r.cpm || 0), 0) / rows.length
     const avgFreq    = rows.reduce((s, r) => s + (r.frequency || 0), 0) / rows.length
     const avgCpc     = rows.reduce((s, r) => s + (r.cpc || 0), 0) / rows.length
     const cpa        = totalPurch > 0 ? totalSpend / totalPurch : null
@@ -109,7 +110,21 @@ async function computeScores(supabase, tenantId, accountId, config) {
       date:           today,
       score:          result.score,
       classification: result.classification,
-      score_details:  result.details,
+      // sub-scores + métricas brutas para uso nos reasons
+      score_details:  {
+        ...result.details,
+        _meta: {
+          spend:       totalSpend,
+          purchases:   totalPurch,
+          revenue:     totalRev,
+          roas:        avgRoas,
+          ctr:         avgCtr,
+          cpm:         avgCpm,
+          frequency:   avgFreq,
+          days_active: rows.length,
+          entity_name: rows[0]?.entity_name || entityId,
+        },
+      },
       computed_at:    new Date().toISOString(),
     })
   }
@@ -141,43 +156,96 @@ async function generateRecommendations(supabase, tenantId, accountId, config) {
 
   if (!scores?.length) return 0
 
-  // Busca nome das campanhas
+  // Busca campanhas com effective_status para filtrar só ativas
   const { data: campaigns } = await supabase
     .from('campaigns')
-    .select('id, name')
+    .select('id, name, effective_status')
     .eq('account_id', accountId)
     .in('id', scores.map(s => s.campaign_id))
 
   const nameMap = {}
-  campaigns?.forEach(c => { nameMap[c.id] = c.name })
-
-  const recs = scores.map(s => {
-    const actionMap = {
-      scale:         { action: 'scale',         reason: `Score ${s.score}/100. ROAS consistente acima de ${config.roas_scale_threshold}x com frequência controlada.` },
-      maintain:      { action: 'observe',        reason: `Score ${s.score}/100. Performance estável. Monitore sem alterações.` },
-      observe:       { action: 'observe',        reason: `Score ${s.score}/100. Performance mediana. Observe por mais 2-3 dias antes de decidir.` },
-      test_creative: { action: 'test_creative',  reason: `Score ${s.score}/100. Métricas fracas. Teste novos criativos antes de pausar.` },
-      pause:         { action: 'pause',          reason: `Score ${s.score}/100. Performance abaixo do mínimo aceitável. Considere pausar.` },
-    }
-
-    const rec = actionMap[s.classification] || actionMap.observe
-
-    return {
-      tenant_id:    tenantId,
-      account_id:   accountId,
-      entity_id:    s.campaign_id,
-      entity_type:  'campaign',
-      entity_name:  nameMap[s.campaign_id] || s.campaign_id,
-      action:       rec.action,
-      reason:       rec.reason,
-      confidence:   s.score / 100,
-      data_context: s.score_details,
-      source:       'rules',
-      is_applied:   false,
-      generated_at: new Date().toISOString(),
-      expires_at:   expires.toISOString(),
-    }
+  const activeCampaignIds = new Set()
+  campaigns?.forEach(c => {
+    nameMap[c.id] = c.name
+    if (c.effective_status === 'ACTIVE') activeCampaignIds.add(c.id)
   })
+
+  // Só gera recomendações para campanhas ativas
+  const activeScores = scores.filter(s => activeCampaignIds.has(s.campaign_id))
+  if (!activeScores.length) return 0
+
+  // Benchmark: top 25% por ROAS
+  const sorted = [...activeScores].sort((a, b) =>
+    (b.score_details?._meta?.roas || 0) - (a.score_details?._meta?.roas || 0)
+  )
+  const topN = Math.max(1, Math.floor(sorted.length * 0.25))
+  const topCampaigns = sorted.slice(0, topN)
+  const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0
+  const benchmarkROAS = avg(topCampaigns.map(s => s.score_details?._meta?.roas || 0))
+  const benchmarkCTR  = avg(topCampaigns.map(s => s.score_details?._meta?.ctr  || 0))
+
+  function fmtBRL(v) {
+    return v >= 1000
+      ? `R$${(v / 1000).toFixed(1)}k`
+      : `R$${Number(v).toFixed(0)}`
+  }
+
+  function buildReason(s) {
+    const m = s.score_details?._meta || {}
+    const days   = m.days_active != null ? `${m.days_active}d ativa` : null
+    const spend  = m.spend  > 0 ? `gasto ${fmtBRL(m.spend)}`      : null
+    const rev    = m.revenue > 0 ? `receita ${fmtBRL(m.revenue)}`  : null
+    const sales  = m.purchases > 0 ? `${m.purchases} vendas`        : 'sem vendas registradas'
+    const roas   = m.roas   > 0 ? `ROAS ${Number(m.roas).toFixed(1)}x`    : null
+    const ctr    = m.ctr    > 0 ? `CTR ${Number(m.ctr).toFixed(2)}%`     : null
+    const bench  = benchmarkROAS > 0
+      ? ` (benchmark conta: ROAS ${benchmarkROAS.toFixed(1)}x · CTR ${benchmarkCTR.toFixed(2)}%)`
+      : ''
+
+    const ctx = [days, spend, rev, sales].filter(Boolean).join(' · ')
+
+    const map = {
+      scale:         `${ctx}. ${roas || ''} consistente${bench} — performance sólida, recomendado aumentar budget.`,
+      maintain:      `${ctx}. ${roas || ''} estável. Mantenha sem alterações e monitore.`,
+      observe:       `${ctx}. ${roas || ''}${bench}. Performance mediana — observe por mais 2-3 dias antes de decidir.`,
+      test_creative: `${ctx}. ${ctr || ''} abaixo do benchmark${bench}. Engajamento fraco — teste novos criativos.`,
+      pause:         `${ctx}. ${roas || ''}${bench}. Retorno insatisfatório — considere pausar e realocar budget.`,
+    }
+    return map[s.classification] || map.observe
+  }
+
+  // Remove recomendações antigas (não aplicadas) desta conta antes de inserir novas
+  await supabase
+    .from('recommendations')
+    .delete()
+    .eq('tenant_id', tenantId)
+    .eq('account_id', accountId)
+    .eq('source', 'rules')
+    .eq('is_applied', false)
+
+  const actionForClassification = {
+    scale:         'scale',
+    maintain:      'observe',
+    observe:       'observe',
+    test_creative: 'test_creative',
+    pause:         'pause',
+  }
+
+  const recs = activeScores.map(s => ({
+    tenant_id:    tenantId,
+    account_id:   accountId,
+    entity_id:    s.campaign_id,
+    entity_type:  'campaign',
+    entity_name:  nameMap[s.campaign_id] || s.campaign_id,
+    action:       actionForClassification[s.classification] || 'observe',
+    reason:       buildReason(s),
+    confidence:   s.score / 100,
+    data_context: s.score_details,
+    source:       'rules',
+    is_applied:   false,
+    generated_at: new Date().toISOString(),
+    expires_at:   expires.toISOString(),
+  }))
 
   const { error } = await supabase.from('recommendations').insert(recs)
   if (error) console.error('[engine] Erro ao salvar recomendações:', error.message)
