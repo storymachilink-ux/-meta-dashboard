@@ -67,10 +67,10 @@
 /* ── Dark Mode ── */
 [data-theme="dark"] {
   --bg-page:              #080d18;
-  --bg-card:              rgba(255,255,255,0.045);
-  --bg-topbar:            rgba(8,13,24,0.88);
-  --bg-input:             rgba(255,255,255,0.06);
-  --bg-subtle:            rgba(255,255,255,0.025);
+  --bg-card:              #111827;
+  --bg-topbar:            #0c1323;
+  --bg-input:             #1a2235;
+  --bg-subtle:            #0f1829;
   --bg-sidebar:           #060a14;
   --bg-sidebar-hover:     rgba(255,255,255,0.05);
   --bg-sidebar-active:    rgba(129,140,248,0.18);
@@ -105,16 +105,25 @@
   --shadow-popup: 0 20px 56px rgba(0,0,0,0.75), 0 6px 20px rgba(0,0,0,0.5);
 }
 
-/* ── Glass effect — dark mode cards ── */
+/* ── Dark mode select options ── */
+[data-theme="dark"] select {
+  background: #1a2235;
+  color: #e0e8ff;
+  border-color: rgba(255,255,255,0.12);
+}
+[data-theme="dark"] select option {
+  background: #1a2235;
+  color: #e0e8ff;
+}
+
+/* ── Dark mode card refinements ── */
 [data-theme="dark"] .hover-card {
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border-color: rgba(255,255,255,0.08) !important;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.07) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04) !important;
 }
 [data-theme="dark"] .hover-card:hover {
   border-color: rgba(129,140,248,0.35) !important;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09) !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06) !important;
 }
 
 /* ── Reset & Base ── */
