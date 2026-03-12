@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 // ============================================================
 // Config
 // ============================================================
-const TOKEN     = process.env.META_TOKEN
+let TOKEN       = process.env.META_TOKEN
 const BASE      = 'https://graph.facebook.com/v21.0'
 const PORT      = process.env.PORT || 3000
 const TENANT_ID = process.env.DEFAULT_TENANT_ID || '00000000-0000-0000-0000-000000000001'
@@ -159,6 +159,18 @@ async function fetchAccount(acc, since, until) {
 const app = express()
 app.use(express.json())
 app.use(express.static(join(__dirname, 'dist')))
+
+// ============================================================
+// POST /api/admin/token — atualiza token em memória sem redeploy
+// Uso: curl -X POST https://...onrender.com/api/admin/token -H "Content-Type: application/json" -d '{"token":"SEU_TOKEN"}'
+// ============================================================
+app.post('/api/admin/token', (req, res) => {
+  const { token } = req.body
+  if (!token) return res.status(400).json({ error: 'token é obrigatório' })
+  TOKEN = token
+  console.log('[admin] META_TOKEN atualizado em memória')
+  res.json({ status: 'ok', preview: token.slice(0, 20) + '...' })
+})
 
 // ============================================================
 // GET /api/health
