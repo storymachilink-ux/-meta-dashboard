@@ -339,12 +339,28 @@ app.get('/api/ads', async (req, res) => {
 
   try {
     const url = `${BASE}/${campaign_id}/ads`
-      + `?fields=id,name,status,creative{thumbnail_url,image_url,title,body}`
+      + `?fields=id,name,status,creative{id,thumbnail_url,image_url,title,body,video_id,object_story_spec}`
       + `&limit=20&access_token=${TOKEN}`
     const resp = await fetch(url)
     const json = await resp.json()
     if (json.error) return res.status(400).json({ error: json.error.message })
-    res.json(json.data || [])
+
+    // For video creatives, fetch the video source URL
+    const ads = json.data || []
+    await Promise.all(ads.map(async ad => {
+      const videoId = ad.creative?.video_id
+      if (!videoId) return
+      try {
+        const vResp = await fetch(`${BASE}/${videoId}?fields=source,embed_html&access_token=${TOKEN}`)
+        const vJson = await vResp.json()
+        if (!vJson.error) {
+          ad.creative.video_source = vJson.source || null
+          ad.creative.video_embed  = vJson.embed_html || null
+        }
+      } catch (_) {}
+    }))
+
+    res.json(ads)
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

@@ -123,10 +123,12 @@ function CreativeModal({ item, onClose }) {
   const { ad, meta } = item;
   const creative = meta?.creative || {};
 
-  const imgSrc = creative.thumbnail_url || creative.image_url || null;
+  const imgSrc   = creative.thumbnail_url || creative.image_url || null;
+  const videoSrc = creative.video_source || null;
+  const isVideo  = !!(creative.video_id);
 
   const techFields = Object.entries(creative).filter(
-    ([k]) => !['thumbnail_url', 'image_url', 'title', 'body'].includes(k)
+    ([k]) => !['thumbnail_url', 'image_url', 'title', 'body', 'video_source', 'video_embed', 'id'].includes(k)
   );
 
   return (
@@ -181,8 +183,43 @@ function CreativeModal({ item, onClose }) {
         >×</button>
 
         <div style={{ padding: '20px 20px 24px' }}>
-          {/* Image */}
-          {imgSrc ? (
+          {/* Video or Image */}
+          {isVideo && videoSrc ? (
+            <video
+              src={videoSrc}
+              controls
+              autoPlay={false}
+              style={{
+                width: '100%',
+                borderRadius: 'var(--r-md)',
+                marginBottom: 16,
+                maxHeight: 360,
+                display: 'block',
+                background: '#000',
+              }}
+            />
+          ) : isVideo && imgSrc ? (
+            // Video but no source URL yet — show thumbnail with play indicator
+            <div style={{ position: 'relative', marginBottom: 16 }}>
+              <img
+                src={imgSrc}
+                alt={ad?.ad_name || 'Creative'}
+                style={{ width: '100%', borderRadius: 'var(--r-md)', objectFit: 'cover', maxHeight: 320, display: 'block' }}
+              />
+              <div style={{
+                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--r-md)',
+              }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%', background: 'rgba(0,0,0,0.7)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+                }}>▶</div>
+              </div>
+              <div style={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+                Vídeo — preview indisponível (permissão da conta)
+              </div>
+            </div>
+          ) : imgSrc ? (
             <img
               src={imgSrc}
               alt={ad?.ad_name || 'Creative'}
