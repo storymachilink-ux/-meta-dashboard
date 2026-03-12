@@ -29,11 +29,11 @@ export default function TimeSeriesChart() {
   const customTip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
-        <div style={{ color: '#94a3b8', fontWeight: 600, marginBottom: '6px' }}>{label}</div>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '10px 14px', fontSize: '12px', boxShadow: 'var(--shadow-md)' }}>
+        <div style={{ color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6 }}>{label}</div>
         {payload.map((p, i) => (
-          <div key={i} style={{ color: p.color, marginBottom: '2px', fontWeight: 600 }}>
-            <span style={{ fontWeight: 400, color: '#64748b' }}>{p.name}: </span>
+          <div key={i} style={{ color: p.color, marginBottom: 2, fontWeight: 600 }}>
+            <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>{p.name}: </span>
             {Number(p.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         ))}
@@ -81,7 +81,7 @@ export default function TimeSeriesChart() {
   }, [filteredDaily, metric, groupBy]);
 
   if (filteredDaily.length === 0) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: '#94a3b8', fontSize: '14px', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)', fontSize: '14px', flexDirection: 'column', gap: '8px' }}>
       <span style={{ fontSize: '40px' }}>📊</span>
       <span>{t.noData}</span>
       <span style={{ fontSize: '12px' }}>Tente ampliar o período de datas</span>
@@ -98,12 +98,12 @@ export default function TimeSeriesChart() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Period header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
-          <span style={{ color: '#94a3b8' }}>Período:</span>{' '}
-          <span style={{ color: '#1e293b', fontWeight: 700 }}>{periodLabel}</span>
+        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+          <span style={{ color: 'var(--text-muted)' }}>Período:</span>{' '}
+          <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{periodLabel}</span>
         </div>
         {isSingleDay && (
-          <span style={{ fontSize: '11px', background: '#fef9c3', color: '#92400e', border: '1px solid #fde68a', borderRadius: '999px', padding: '2px 10px', fontWeight: 600 }}>
+          <span style={{ fontSize: '11px', background: 'var(--warning-soft)', color: 'var(--warning)', border: '1px solid var(--warning)', borderRadius: 999, padding: '2px 10px', fontWeight: 600 }}>
             Visão de 1 dia
           </span>
         )}
@@ -113,9 +113,9 @@ export default function TimeSeriesChart() {
         <ResponsiveContainer width="100%" height={220}>
           {isSingleDay ? (
             <BarChart data={withAvg} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={v => 'R$' + v} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} tickFormatter={v => 'R$' + v} />
               <Tooltip content={customTip} />
               <Bar dataKey="spend" fill="#6366f1" name="Invest. R$" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -127,9 +127,9 @@ export default function TimeSeriesChart() {
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={v => 'R$' + v} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} tickFormatter={v => 'R$' + v} />
               <Tooltip content={customTip} />
               <Legend wrapperStyle={{ fontSize: '12px' }} />
               <Area type="monotone" dataKey="spend" stroke="#6366f1" fill="url(#spendArea)" strokeWidth={2} dot={false} name="Invest. R$" />
@@ -143,9 +143,9 @@ export default function TimeSeriesChart() {
         <ChartCard title="🎯 CTR Médio Diário (%)">
           <ResponsiveContainer width="100%" height={170}>
             <LineChart data={totalByDay} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
               <Tooltip content={customTip} />
               <Line type="monotone" dataKey="ctr" stroke="#10b981" dot={false} strokeWidth={2} name="CTR %" />
             </LineChart>
@@ -154,9 +154,9 @@ export default function TimeSeriesChart() {
         <ChartCard title="🏷 CPC Médio Diário (R$)">
           <ResponsiveContainer width="100%" height={170}>
             <LineChart data={totalByDay} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
               <Tooltip content={customTip} />
               <Line type="monotone" dataKey="cpc" stroke="#f59e0b" dot={false} strokeWidth={2} name="CPC R$" />
             </LineChart>
@@ -180,9 +180,9 @@ export default function TimeSeriesChart() {
       >
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={byGroup} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
             <Tooltip content={customTip} />
             <Legend wrapperStyle={{ fontSize: '11px' }} />
             {groups.slice(0, 7).map((g, i) => (
@@ -195,9 +195,9 @@ export default function TimeSeriesChart() {
       <ChartCard title="📡 CPM Diário (R$/mil imp.)">
         <ResponsiveContainer width="100%" height={160}>
           <LineChart data={totalByDay} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
             <Tooltip content={customTip} />
             <Line type="monotone" dataKey="cpm" stroke="#8b5cf6" dot={false} strokeWidth={2} name="CPM R$" />
           </LineChart>
@@ -209,9 +209,9 @@ export default function TimeSeriesChart() {
 
 function ChartCard({ title, children, controls }) {
   return (
-    <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>{title}</div>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px 20px', boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.1px' }}>{title}</div>
         {controls}
       </div>
       {children}
@@ -220,6 +220,6 @@ function ChartCard({ title, children, controls }) {
 }
 
 const selStyle = {
-  background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
-  color: '#334155', padding: '6px 10px', fontSize: '12px', outline: 'none', cursor: 'pointer',
+  background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--r-sm)',
+  color: 'var(--text-secondary)', padding: '6px 10px', fontSize: '12px', outline: 'none', cursor: 'pointer',
 };

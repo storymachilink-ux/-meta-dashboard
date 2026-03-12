@@ -26,6 +26,9 @@ const DAY_PRESETS = [3, 5, 7, 12, 15, 20, 30, 60, 90];
 export default function App() {
   const [lang, setLang] = useState('pt');
   const [tab, setTab] = useState('overview');
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('theme') === 'dark'; } catch { return false; }
+  });
   const [days, setDays] = useState(30);
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
@@ -65,6 +68,12 @@ export default function App() {
       setTimeout(() => setSyncing(false), 8000);
     }
   }, [alertsHook, recsHook, cutoffDate, endDate, fetchLive]);
+
+  // Apply theme to <html>
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    try { localStorage.setItem('theme', darkMode ? 'dark' : 'light'); } catch {}
+  }, [darkMode]);
 
   const TODAY = new Date().toISOString().slice(0, 10);
   const t = translations[lang];
@@ -240,13 +249,15 @@ export default function App() {
     reloadRecs:       recsHook.reload,
     // Sync manual
     syncing, triggerSync,
+    // Theme
+    darkMode, setDarkMode,
   };
 
   const mainPad = sidebarCollapsed ? '72px' : '240px';
 
   return (
     <AppCtx.Provider value={ctx}>
-      <div style={{ display: 'flex', minHeight: '100vh', background: '#f0f2f5' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-page)', transition: 'background var(--t-slow)' }}>
         <Sidebar tab={tab} setTab={setTab} collapsed={sidebarCollapsed}
           toggleCollapse={() => setSidebarCollapsed(p => !p)}
           setSelectedCampaign={setSelectedCampaign}
@@ -256,15 +267,15 @@ export default function App() {
             selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign} />
 
           {loading && (
-            <div style={{ background: '#eff6ff', borderBottom: '1px solid #bfdbfe', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#1d4ed8' }}>
-              <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #93c5fd', borderTopColor: '#1d4ed8', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            <div style={{ background: 'var(--info-soft)', borderBottom: '1px solid var(--accent-border)', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--accent)' }}>
+              <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid var(--accent-border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
               Buscando dados ao vivo na Meta API...
             </div>
           )}
           {error && (
-            <div style={{ background: '#fef2f2', borderBottom: '1px solid #fecaca', padding: '10px 28px', fontSize: '13px', color: '#dc2626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ background: 'var(--danger-soft)', borderBottom: '1px solid var(--danger)', padding: '10px 28px', fontSize: '13px', color: 'var(--danger)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>⚠️ Erro ao buscar dados: {error}</span>
-              <button onClick={() => fetchLive(cutoffDate, endDate)} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '12px', color: '#dc2626' }}>Tentar novamente</button>
+              <button onClick={() => fetchLive(cutoffDate, endDate)} style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger)', borderRadius: 'var(--r-sm)', padding: '4px 10px', cursor: 'pointer', fontSize: '12px', color: 'var(--danger)' }}>Tentar novamente</button>
             </div>
           )}
 
