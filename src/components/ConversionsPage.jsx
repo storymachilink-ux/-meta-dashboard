@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 import { adsData } from '../adsData.js';
 import { fmtBRL, fmtInt, fmtPct, calcScore, scoreColor } from '../utils.js';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';

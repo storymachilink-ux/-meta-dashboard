@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 
 function parseInline(text) {
   const parts = String(text).split(/(\*\*[^*]+\*\*)/g);

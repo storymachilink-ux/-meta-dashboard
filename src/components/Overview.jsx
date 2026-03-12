@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 import { fmtBRL, fmtInt, fmtPct, fmt, scoreColor } from '../utils.js';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import PeriodPills from './PeriodPills.jsx';

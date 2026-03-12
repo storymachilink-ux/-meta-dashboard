@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 import { adsData } from '../adsData.js';
 import { adsetsData } from '../adsetsData.js';
 import { fmtBRL, fmtInt, fmtPct, scoreColor } from '../utils.js';

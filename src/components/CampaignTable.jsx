@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 import { fmtBRL, fmtInt, fmtPct, scoreColor, calcScore } from '../utils.js';
 
 export default function CampaignTable({ onSelectCampaign }) {

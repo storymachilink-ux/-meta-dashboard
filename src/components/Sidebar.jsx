@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 
 /* ── SVG Icon Components ── */
 const IconGrid = () => (

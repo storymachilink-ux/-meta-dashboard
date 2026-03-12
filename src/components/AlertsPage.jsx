@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 
 const SEVERITY_CONFIG = {
   critical: { label: 'Crítico', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', dot: '#ef4444' },

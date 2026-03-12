@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, createContext, useContext } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { campaigns as staticCampaigns } from './campaignData.js';
 import { dailyData as staticDailyData } from './dailyData.js';
 import { adsData } from './adsData.js';
@@ -8,6 +8,8 @@ import { buildAnswer } from './chatEngine.js';
 import { useAlerts } from './hooks/useAlerts.js';
 import { useRecommendations } from './hooks/useRecommendations.js';
 import { triggerIncremental, triggerRules } from './lib/api.js';
+import { AppCtx } from './AppContext.jsx';
+export { useApp } from './AppContext.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import SearchBar from './components/SearchBar.jsx';
@@ -18,8 +20,6 @@ import TimeSeriesChart from './components/TimeSeriesChart.jsx';
 import ConversionsPage from './components/ConversionsPage.jsx';
 import AlertsPage from './components/AlertsPage.jsx';
 
-export const AppCtx = createContext(null);
-export const useApp = () => useContext(AppCtx);
 
 const DAY_PRESETS = [3, 5, 7, 12, 15, 20, 30, 60, 90];
 

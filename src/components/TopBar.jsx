@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 
 const TAB_TITLES = {
   overview:    { pt: 'Visão Geral',    en: 'Overview' },

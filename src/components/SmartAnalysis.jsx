@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../App.jsx';
+import { useApp } from '../AppContext.jsx';
 import { dailyAdsData } from '../dailyAdsData.js';
 import { fmtBRL, fmtPct } from '../utils.js';
 
