@@ -5,6 +5,12 @@ import { createClient } from '@supabase/supabase-js'
 import cron from 'node-cron'
 
 import { runBackfill, runIncremental, runHourly } from './jobs/ingest.js'
+import { runRulesForAllAccounts }                 from './rules/engine.js'
+import { handleCampaigns }       from './src/api/campaigns.js'
+import { handleDaily }           from './src/api/daily.js'
+import { handleHourly }          from './src/api/hourly.js'
+import { handleGetAlerts, handlePatchAlert } from './src/api/alerts.js'
+import { handleRecommendations } from './src/api/recommendations.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -266,6 +272,66 @@ app.post('/api/sync/hourly', async (req, res) => {
 })
 
 // ============================================================
+// GET /api/campaigns — campanhas agregadas do período (banco)
+// ============================================================
+app.get('/api/campaigns', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handleCampaigns(req, res, supabase, TENANT_ID)
+})
+
+// ============================================================
+// GET /api/daily — série temporal diária (banco)
+// ============================================================
+app.get('/api/daily', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handleDaily(req, res, supabase, TENANT_ID)
+})
+
+// ============================================================
+// GET /api/hourly — dados horários (banco)
+// ============================================================
+app.get('/api/hourly', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handleHourly(req, res, supabase, TENANT_ID)
+})
+
+// ============================================================
+// GET  /api/alerts — alertas ativos
+// PATCH /api/alerts/:id — marcar lido/dismissado
+// ============================================================
+app.get('/api/alerts', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handleGetAlerts(req, res, supabase, TENANT_ID)
+})
+
+app.patch('/api/alerts/:id', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handlePatchAlert(req, res, supabase, TENANT_ID)
+})
+
+// ============================================================
+// GET /api/recommendations — recomendações ativas
+// ============================================================
+app.get('/api/recommendations', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handleRecommendations(req, res, supabase, TENANT_ID)
+})
+
+// ============================================================
+// POST /api/sync/rules
+// Dispara motor de regras manualmente
+// ============================================================
+app.post('/api/sync/rules', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+
+  res.json({ status: 'started', mode: 'rules', accounts: ACCOUNTS.length })
+
+  runRulesForAllAccounts(supabase, ACCOUNTS, TENANT_ID)
+    .then(r => console.log('[sync] Rules finalizado:', r))
+    .catch(e => console.error('[sync] Rules erro:', e.message))
+})
+
+// ============================================================
 // GET /api/sync/status
 // Últimos 20 logs de sync
 // ============================================================
@@ -294,12 +360,16 @@ app.use((req, res) => {
 // Cron jobs (só se Supabase + Meta Token estiverem configurados)
 // ============================================================
 if (supabase && TOKEN) {
-  // Incremental: a cada 6 horas (0h, 6h, 12h, 18h)
-  cron.schedule('0 0,6,12,18 * * *', () => {
-    console.log('[cron] Iniciando sync incremental...')
-    runIncremental(supabase, ACCOUNTS, TOKEN, TENANT_ID)
-      .then(r => console.log('[cron] Incremental:', r))
-      .catch(e => console.error('[cron] Incremental erro:', e.message))
+  // Incremental + Rules: a cada 6 horas (0h, 6h, 12h, 18h)
+  cron.schedule('0 0,6,12,18 * * *', async () => {
+    console.log('[cron] Iniciando sync incremental + rules...')
+    try {
+      await runIncremental(supabase, ACCOUNTS, TOKEN, TENANT_ID)
+      await runRulesForAllAccounts(supabase, ACCOUNTS, TENANT_ID)
+      console.log('[cron] Incremental + Rules concluídos')
+    } catch (e) {
+      console.error('[cron] Erro:', e.message)
+    }
   })
 
   // Hourly: todos os dias às 2h (fecha dados do dia anterior)
