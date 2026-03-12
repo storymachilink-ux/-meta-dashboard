@@ -157,11 +157,18 @@ function metaApiPlugin() {
 export default defineConfig({
   plugins: [react(), metaApiPlugin()],
   server: { port: 3000 },
+  optimizeDeps: {
+    include: ['recharts'],
+  },
   build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('recharts') || id.includes('d3-')) return 'recharts';
+          if (id.includes('/node_modules/recharts/')) return 'recharts';
+          if (id.includes('/node_modules/d3') || id.includes('/node_modules/victory-vendor')) return 'd3';
           if (id.includes('node_modules')) return 'vendor';
         }
       }

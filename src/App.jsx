@@ -9,7 +9,6 @@ import { useAlerts } from './hooks/useAlerts.js';
 import { useRecommendations } from './hooks/useRecommendations.js';
 import { triggerIncremental, triggerRules } from './lib/api.js';
 import { AppCtx } from './AppContext.jsx';
-export { useApp } from './AppContext.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import SearchBar from './components/SearchBar.jsx';
