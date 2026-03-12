@@ -2,16 +2,17 @@ import React from 'react';
 import { useApp } from '../App.jsx';
 
 const NAV_ITEMS = [
-  { id: 'overview', icon: '⊞', iconActive: '⊞' },
-  { id: 'campaigns', icon: '📋', iconActive: '📋' },
-  { id: 'charts', icon: '📈', iconActive: '📈' },
-  { id: 'conversions', icon: '🎯', iconActive: '🎯' },
-  { id: 'audience', icon: '👥', iconActive: '👥' },
-  { id: 'devices', icon: '📱', iconActive: '📱' },
-  { id: 'reports', icon: '✉️', iconActive: '✉️' },
+  { id: 'overview',    icon: '⊞', iconActive: '⊞' },
+  { id: 'campaigns',  icon: '📋', iconActive: '📋' },
+  { id: 'charts',     icon: '📈', iconActive: '📈' },
+  { id: 'conversions',icon: '🎯', iconActive: '🎯' },
+  { id: 'alerts',     icon: '🔔', iconActive: '🔔', badge: true },
+  { id: 'audience',   icon: '👥', iconActive: '👥' },
+  { id: 'devices',    icon: '📱', iconActive: '📱' },
+  { id: 'reports',    icon: '✉️', iconActive: '✉️' },
 ];
 
-export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSelectedCampaign }) {
+export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSelectedCampaign, alertCount }) {
   const { t, pinnedIds, allCampaigns, togglePin } = useApp();
 
   const pinnedCampaigns = allCampaigns.filter(c => pinnedIds.has(c.id));
@@ -73,10 +74,26 @@ export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSel
               onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
               onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'none'; }}
             >
-              <span style={{ fontSize: '18px', flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ fontSize: '18px', flexShrink: 0, position: 'relative' }}>
+                {item.icon}
+                {item.badge && alertCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -4, right: -6,
+                    background: '#ef4444', color: 'white',
+                    fontSize: '9px', fontWeight: 700, minWidth: 14, height: 14,
+                    borderRadius: '999px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 3px', lineHeight: 1,
+                  }}>{alertCount > 99 ? '99+' : alertCount}</span>
+                )}
+              </span>
               {!collapsed && (
-                <span style={{ fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? '#818cf8' : '#94a3b8', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? '#818cf8' : '#94a3b8', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {t.nav[item.id]}
+                  {item.badge && alertCount > 0 && !collapsed && (
+                    <span style={{ background: '#ef4444', color: 'white', fontSize: '10px', fontWeight: 700, minWidth: 18, height: 18, borderRadius: '999px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                      {alertCount > 99 ? '99+' : alertCount}
+                    </span>
+                  )}
                 </span>
               )}
             </button>
