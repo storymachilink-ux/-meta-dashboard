@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../AppContext.jsx';
 
-const SEVERITY_CONFIG = {
-  critical: { label: 'Crítico', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', dot: '#ef4444' },
-  warning:  { label: 'Atenção',  color: '#d97706', bg: '#fffbeb', border: '#fde68a', dot: '#f59e0b' },
-  info:     { label: 'Info',     color: '#0369a1', bg: '#eff6ff', border: '#bfdbfe', dot: '#3b82f6' },
+const SEVERITY = {
+  critical: { label: 'Crítico',  color: 'var(--danger)',  bg: 'var(--danger-soft)',  border: 'var(--danger)',  dot: 'var(--danger)'  },
+  warning:  { label: 'Atenção',  color: 'var(--warning)', bg: 'var(--warning-soft)', border: 'var(--warning)', dot: 'var(--warning)' },
+  info:     { label: 'Info',     color: 'var(--info)',    bg: 'var(--info-soft)',    border: 'var(--info)',    dot: 'var(--info)'    },
 };
 
 const TYPE_LABELS = {
@@ -15,8 +15,15 @@ const TYPE_LABELS = {
   scalable:       'Escalável',
 };
 
+const SUMMARY_CARDS = [
+  { key: 'total',    label: 'Total',    icon: '🔔', color: 'var(--accent)',   bg: 'var(--accent-soft)'  },
+  { key: 'critical', label: 'Críticos', icon: '🚨', color: 'var(--danger)',   bg: 'var(--danger-soft)'  },
+  { key: 'warning',  label: 'Atenção',  icon: '⚠️', color: 'var(--warning)',  bg: 'var(--warning-soft)' },
+  { key: 'info',     label: 'Info',     icon: 'ℹ️', color: 'var(--info)',     bg: 'var(--info-soft)'    },
+];
+
 export default function AlertsPage() {
-  const { alerts, alertsLoading, alertsSummary, dismissAlert, reloadAlerts, t } = useApp();
+  const { alerts, alertsLoading, alertsSummary, dismissAlert, reloadAlerts } = useApp();
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [dismissing, setDismissing] = useState(new Set());
@@ -29,11 +36,8 @@ export default function AlertsPage() {
 
   const handleDismiss = async (id) => {
     setDismissing(prev => new Set(prev).add(id));
-    try {
-      await dismissAlert(id);
-    } finally {
-      setDismissing(prev => { const s = new Set(prev); s.delete(id); return s; });
-    }
+    try { await dismissAlert(id); }
+    finally { setDismissing(prev => { const s = new Set(prev); s.delete(id); return s; }); }
   };
 
   const alertTypes = [...new Set((alerts || []).map(a => a.alert_type))];
@@ -41,16 +45,18 @@ export default function AlertsPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>Central de Alertas</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.4px' }}>Central de Alertas</h2>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
             Monitoramento automático das suas campanhas
           </p>
         </div>
         <button
           onClick={reloadAlerts}
-          style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px 16px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, transition: 'all var(--t-fast)' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-border)'; e.currentTarget.style.color = 'var(--accent)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
         >
           ↻ Atualizar
         </button>
@@ -58,34 +64,36 @@ export default function AlertsPage() {
 
       {/* Summary cards */}
       {alertsSummary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-          {[
-            { label: 'Total', value: alertsSummary.total || 0, color: '#475569', bg: '#f8fafc' },
-            { label: 'Críticos', value: alertsSummary.critical || 0, color: '#dc2626', bg: '#fef2f2' },
-            { label: 'Atenção', value: alertsSummary.warning || 0, color: '#d97706', bg: '#fffbeb' },
-            { label: 'Info', value: alertsSummary.info || 0, color: '#0369a1', bg: '#eff6ff' },
-          ].map(card => (
-            <div key={card.label} style={{ background: card.bg, borderRadius: '10px', padding: '14px 16px', border: `1px solid ${card.color}22` }}>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: card.color }}>{card.value}</div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{card.label}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 20 }}>
+          {SUMMARY_CARDS.map(({ key, label, icon, color, bg }) => (
+            <div key={key} style={{ background: bg, border: `1px solid ${color}`, borderRadius: 'var(--r-lg)', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: '16px' }}>{icon}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+              </div>
+              <div style={{ fontSize: '28px', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-0.8px' }}>
+                {alertsSummary[key] || 0}
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-subtle)', borderRadius: 'var(--r-md)', padding: 4, border: '1px solid var(--border)' }}>
           {['all', 'critical', 'warning', 'info'].map(s => (
             <button key={s} onClick={() => setFilterSeverity(s)}
               style={{
-                padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 500,
-                background: filterSeverity === s ? 'white' : 'transparent',
-                color: filterSeverity === s ? '#1e293b' : '#64748b',
-                boxShadow: filterSeverity === s ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                padding: '5px 12px', borderRadius: 'var(--r-sm)', border: 'none', cursor: 'pointer',
+                fontSize: '12px', fontWeight: filterSeverity === s ? 700 : 500,
+                background: filterSeverity === s ? 'var(--bg-card)' : 'transparent',
+                color: filterSeverity === s ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: filterSeverity === s ? 'var(--shadow-sm)' : 'none',
+                transition: 'all var(--t-fast)',
               }}
             >
-              {s === 'all' ? 'Todos' : SEVERITY_CONFIG[s]?.label || s}
+              {s === 'all' ? 'Todos' : SEVERITY[s]?.label || s}
             </button>
           ))}
         </div>
@@ -94,7 +102,7 @@ export default function AlertsPage() {
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', color: '#475569', background: 'white', cursor: 'pointer' }}
+            style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '6px 10px', fontSize: '12px', color: 'var(--text-secondary)', background: 'var(--bg-card)', cursor: 'pointer', fontWeight: 500 }}
           >
             <option value="all">Todos os tipos</option>
             {alertTypes.map(type => (
@@ -104,18 +112,19 @@ export default function AlertsPage() {
         )}
       </div>
 
-      {/* Content */}
+      {/* Loading */}
       {alertsLoading && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '40px', justifyContent: 'center', color: '#64748b', fontSize: '14px' }}>
-          <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid #cbd5e1', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '40px', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+          <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Carregando alertas...
         </div>
       )}
 
+      {/* Empty state */}
       {!alertsLoading && filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-          <div style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '48px', marginBottom: 12 }}>✅</div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
             {(alerts || []).length === 0 ? 'Nenhum alerta ativo' : 'Nenhum alerta nesta categoria'}
           </div>
           <div style={{ fontSize: '13px' }}>
@@ -126,43 +135,44 @@ export default function AlertsPage() {
         </div>
       )}
 
+      {/* Alert list */}
       {!alertsLoading && filtered.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.map(alert => {
-            const cfg = SEVERITY_CONFIG[alert.severity] || SEVERITY_CONFIG.info;
+            const cfg = SEVERITY[alert.severity] || SEVERITY.info;
             const isDismissing = dismissing.has(alert.id);
             return (
               <div key={alert.id} style={{
                 background: cfg.bg,
                 border: `1px solid ${cfg.border}`,
-                borderRadius: '12px',
+                borderRadius: 'var(--r-lg)',
                 padding: '16px 18px',
                 display: 'flex',
-                gap: '14px',
+                gap: 14,
                 alignItems: 'flex-start',
                 opacity: isDismissing ? 0.5 : 1,
-                transition: 'opacity 0.2s',
+                transition: 'opacity 0.2s, transform 0.15s',
               }}>
-                {/* Dot */}
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: cfg.dot, flexShrink: 0, marginTop: '4px' }} />
+                {/* Left accent dot */}
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: cfg.dot, flexShrink: 0, marginTop: 4, boxShadow: `0 0 0 3px ${cfg.dot}28` }} />
 
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{alert.title}</span>
-                    <span style={{ fontSize: '11px', background: cfg.color + '20', color: cfg.color, padding: '2px 7px', borderRadius: '999px', fontWeight: 600 }}>
-                      {SEVERITY_CONFIG[alert.severity]?.label || alert.severity}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
+                    <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>{alert.title}</span>
+                    <span style={{ fontSize: '11px', background: cfg.color + '20', color: cfg.color, padding: '2px 8px', borderRadius: 999, fontWeight: 700, border: `1px solid ${cfg.border}` }}>
+                      {SEVERITY[alert.severity]?.label || alert.severity}
                     </span>
-                    <span style={{ fontSize: '11px', background: '#f1f5f9', color: '#475569', padding: '2px 7px', borderRadius: '999px' }}>
+                    <span style={{ fontSize: '11px', background: 'var(--bg-card)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: 999, border: '1px solid var(--border)' }}>
                       {TYPE_LABELS[alert.alert_type] || alert.alert_type}
                     </span>
                   </div>
-                  <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#374151', lineHeight: 1.5 }}>{alert.message}</p>
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '11px', color: '#94a3b8' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{alert.message}</p>
+                  <div style={{ display: 'flex', gap: 16, fontSize: '11px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                     {alert.date_ref && <span>📅 {alert.date_ref}</span>}
                     {alert.entity_name && <span>📢 {alert.entity_name}</span>}
                     {alert.metric_value != null && (
-                      <span>Valor: <strong style={{ color: '#475569' }}>{Number(alert.metric_value).toFixed(2)}</strong></span>
+                      <span>Valor: <strong style={{ color: 'var(--text-secondary)' }}>{Number(alert.metric_value).toFixed(2)}</strong></span>
                     )}
                   </div>
                 </div>
@@ -173,10 +183,14 @@ export default function AlertsPage() {
                   disabled={isDismissing}
                   title="Dispensar alerta"
                   style={{
-                    flexShrink: 0, background: 'none', border: '1px solid ' + cfg.border,
-                    borderRadius: '6px', padding: '4px 10px', cursor: isDismissing ? 'default' : 'pointer',
-                    fontSize: '12px', color: '#94a3b8', whiteSpace: 'nowrap',
+                    flexShrink: 0, background: 'none', border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-sm)', padding: '4px 10px',
+                    cursor: isDismissing ? 'default' : 'pointer',
+                    fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap',
+                    transition: 'all var(--t-fast)',
                   }}
+                  onMouseEnter={e => { if (!isDismissing) { e.currentTarget.style.borderColor = 'var(--danger)'; e.currentTarget.style.color = 'var(--danger)'; }}}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
                   {isDismissing ? '...' : '✕ Dispensar'}
                 </button>

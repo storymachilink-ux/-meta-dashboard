@@ -126,6 +126,56 @@
   box-shadow: 0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06) !important;
 }
 
+/* ── Section header with left accent bar ── */
+.section-header {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding-left: 10px;
+  border-left: 3px solid var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+/* ── Decision panel dark header band ── */
+.decision-band {
+  background: linear-gradient(135deg, #0c1428, #162040);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
+[data-theme="dark"] .decision-band {
+  background: linear-gradient(135deg, #020408, #07101f);
+}
+
+/* ── Insight chip strip ── */
+.insight-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  flex: 1 1 150px;
+  min-width: 0;
+  transition: border-color var(--t-fast);
+}
+.insight-chip.is-alert {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+.insight-chip.is-warn {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+/* ── Alert severity cards ── */
+[data-theme="dark"] .alert-card-critical { background: var(--danger-soft) !important; border-color: var(--danger) !important; }
+[data-theme="dark"] .alert-card-warning  { background: var(--warning-soft) !important; border-color: var(--warning) !important; }
+[data-theme="dark"] .alert-card-info     { background: var(--info-soft) !important; border-color: var(--info) !important; }
+
 /* ── Reset & Base ── */
 *, *::before, *::after {
   box-sizing: border-box;

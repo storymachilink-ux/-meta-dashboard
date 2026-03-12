@@ -132,6 +132,15 @@ export default function TopBar({ lang, setLang, tab, selectedCampaign, setSelect
   const [customEnd, setCustomEnd] = useState(customDateEnd || TODAY);
   const dropRef = useRef(null);
 
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [tokenStatus, setTokenStatus] = useState(null); // null | 'saving' | 'ok' | 'error'
@@ -243,14 +252,57 @@ export default function TopBar({ lang, setLang, tab, selectedCampaign, setSelect
       {/* ── Right: Controls ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 
-        {/* Account filter */}
-        <select
-          value={selectedAccount}
-          onChange={e => setSelectedAccount(e.target.value)}
-          style={{ ...inputStyle, minWidth: 140 }}
-        >
-          {ACCOUNTS_OPTS.map(o => <option key={o.value} value={o.value}>{o[lang]}</option>)}
-        </select>
+        {/* Account filter — custom dropdown (native select breaks dark mode on Windows) */}
+        <div style={{ position: 'relative' }} ref={accountRef}>
+          <button
+            onClick={() => setAccountOpen(p => !p)}
+            style={{
+              ...inputStyle, minWidth: 148, display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', gap: 8, cursor: 'pointer',
+              background: accountOpen ? 'var(--accent-soft)' : 'var(--bg-input)',
+              border: `1px solid ${accountOpen ? 'var(--accent-border)' : 'var(--border-input)'}`,
+              color: accountOpen ? 'var(--accent)' : 'var(--text-primary)',
+            }}
+          >
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
+              {ACCOUNTS_OPTS.find(o => o.value === selectedAccount)?.[lang] || selectedAccount}
+            </span>
+            <IconChevronDown open={accountOpen} />
+          </button>
+
+          {accountOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-popup)',
+              zIndex: 400, minWidth: 180, overflow: 'hidden',
+              padding: '4px',
+            }}>
+              {ACCOUNTS_OPTS.map(o => {
+                const active = o.value === selectedAccount;
+                return (
+                  <button key={o.value}
+                    onClick={() => { setSelectedAccount(o.value); setAccountOpen(false); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      width: '100%', padding: '8px 12px', border: 'none', cursor: 'pointer',
+                      borderRadius: 'var(--r-sm)', textAlign: 'left', fontSize: '13px',
+                      background: active ? 'var(--accent-soft)' : 'transparent',
+                      color: active ? 'var(--accent)' : 'var(--text-primary)',
+                      fontWeight: active ? 700 : 400,
+                      transition: 'background var(--t-fast)',
+                    }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-subtle)'; }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <span>{o[lang]}</span>
+                    {active && <span style={{ fontSize: '10px', color: 'var(--accent)' }}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Date picker */}
         <div style={{ position: 'relative' }} ref={dropRef}>

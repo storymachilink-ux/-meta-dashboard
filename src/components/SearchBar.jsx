@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
+import { fmtBRL } from '../utils.js';
 
 function parseInline(text) {
   const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
@@ -117,12 +118,23 @@ function TypingDots() {
 }
 
 export default function SearchBar() {
-  const { t, days, chatHistory, setChatHistory, handleAsk } = useApp();
+  const { t, days, chatHistory, setChatHistory, handleAsk,
+          filteredCampaigns, scaleRecs, pauseRecs, testRecs } = useApp();
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const hasMessages = chatHistory && chatHistory.length > 0;
+
+  // Quick insights computed from live data
+  const topSpend = filteredCampaigns?.[0];
+  const bestROAS = filteredCampaigns
+    ? [...filteredCampaigns].filter(c => c.roas > 0).sort((a, b) => b.roas - a.roas)[0]
+    : null;
+  const worstCTR = filteredCampaigns
+    ? [...filteredCampaigns].filter(c => c.ctr > 0 && c.impressions > 300).sort((a, b) => a.ctr - b.ctr)[0]
+    : null;
+  const pendingActions = (scaleRecs?.length || 0) + (pauseRecs?.length || 0) + (testRecs?.length || 0);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -181,6 +193,27 @@ export default function SearchBar() {
           </button>
         )}
       </div>
+
+      {/* ── Insights Strip — visible only when chat is empty ── */}
+      {!hasMessages && filteredCampaigns?.length > 0 && (
+        <div style={{ padding: '14px 20px 0', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {[
+            topSpend && { icon: '💰', label: 'Maior Gasto', value: fmtBRL(topSpend.spend), sub: topSpend.name },
+            bestROAS && { icon: '📈', label: 'Melhor ROAS', value: bestROAS.roas.toFixed(1) + 'x ROAS', sub: bestROAS.name },
+            worstCTR && { icon: '📉', label: 'CTR Crítico', value: worstCTR.ctr.toFixed(2) + '%', sub: worstCTR.name, alert: true },
+            pendingActions > 0 && { icon: '⚡', label: 'Ações IA', value: pendingActions + ' pendentes', sub: 'Painel de Decisão', warn: true },
+          ].filter(Boolean).map((chip, i) => (
+            <div key={i} className={`insight-chip${chip.alert ? ' is-alert' : chip.warn ? ' is-warn' : ''}`}>
+              <span style={{ fontSize: '18px', flexShrink: 0 }}>{chip.icon}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '9.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>{chip.label}</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: chip.alert ? 'var(--danger)' : chip.warn ? 'var(--warning)' : 'var(--text-primary)', lineHeight: 1.2 }}>{chip.value}</div>
+                <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chip.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Messages ── */}
       {hasMessages && (

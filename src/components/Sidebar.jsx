@@ -78,19 +78,25 @@ const IconChevronRight = () => (
 );
 
 const NAV_ITEMS = [
-  { id: 'overview',         label_pt: 'Visão Geral',      label_en: 'Overview',         Icon: IconGrid },
-  { id: 'campaigns',        label_pt: 'Campanhas',         label_en: 'Campaigns',        Icon: IconList },
-  { id: 'charts',           label_pt: 'Gráficos',          label_en: 'Charts',           Icon: IconBarChart },
-  { id: 'conversions',      label_pt: 'Conversões',        label_en: 'Conversions',      Icon: IconTarget },
-  { id: 'alerts',           label_pt: 'Alertas',           label_en: 'Alerts',           Icon: IconBell, badge: true },
-  { id: 'recommendations',  label_pt: 'Recomendações',     label_en: 'Recommendations',  Icon: IconZap, recBadge: true },
-  { id: 'audience',         label_pt: 'Público',           label_en: 'Audience',         Icon: IconUsers },
-  { id: 'devices',          label_pt: 'Dispositivos',      label_en: 'Devices',          Icon: IconMonitor },
-  { id: 'reports',          label_pt: 'Relatórios',        label_en: 'Reports',          Icon: IconFileText },
+  { id: 'overview',         label_pt: 'Visão Geral',      label_en: 'Overview',         Icon: IconGrid,      group: 'analytics' },
+  { id: 'campaigns',        label_pt: 'Campanhas',         label_en: 'Campaigns',        Icon: IconList,      group: 'analytics' },
+  { id: 'charts',           label_pt: 'Gráficos',          label_en: 'Charts',           Icon: IconBarChart,  group: 'analytics' },
+  { id: 'conversions',      label_pt: 'Conversões',        label_en: 'Conversions',      Icon: IconTarget,    group: 'analytics' },
+  { id: 'alerts',           label_pt: 'Alertas',           label_en: 'Alerts',           Icon: IconBell,      group: 'insights', badge: true },
+  { id: 'recommendations',  label_pt: 'Recomendações',     label_en: 'Recommendations',  Icon: IconZap,       group: 'insights', recBadge: true },
+  { id: 'audience',         label_pt: 'Público',           label_en: 'Audience',         Icon: IconUsers,     group: 'data' },
+  { id: 'devices',          label_pt: 'Dispositivos',      label_en: 'Devices',          Icon: IconMonitor,   group: 'data' },
+  { id: 'reports',          label_pt: 'Relatórios',        label_en: 'Reports',          Icon: IconFileText,  group: 'data' },
 ];
 
+const GROUP_LABELS = {
+  analytics: { pt: 'Análise', en: 'Analytics' },
+  insights:  { pt: 'Insights', en: 'Insights' },
+  data:      { pt: 'Dados', en: 'Data' },
+};
+
 export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSelectedCampaign, alertCount }) {
-  const { t, lang, pinnedIds, allCampaigns, togglePin, recommendations } = useApp();
+  const { lang, pinnedIds, allCampaigns, togglePin, recommendations } = useApp();
   const recCount = recommendations?.filter(r => !r.applied).length || 0;
   const pinnedCampaigns = allCampaigns.filter(c => pinnedIds.has(c.id));
 
@@ -153,11 +159,22 @@ export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSel
 
       {/* ── Nav ── */}
       <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto', overflowX: 'hidden' }}>
-        {NAV_ITEMS.map(item => {
+        {NAV_ITEMS.map((item, idx) => {
           const active = tab === item.id;
           const label = lang === 'en' ? item.label_en : item.label_pt;
+          const prevGroup = idx > 0 ? NAV_ITEMS[idx - 1].group : null;
+          const showGroupLabel = !collapsed && item.group !== prevGroup;
+          const groupLabel = showGroupLabel ? (lang === 'en' ? GROUP_LABELS[item.group].en : GROUP_LABELS[item.group].pt) : null;
           return (
-            <button key={item.id} onClick={() => handleNav(item.id)}
+            <React.Fragment key={item.id}>
+              {showGroupLabel && (
+                <div style={{
+                  fontSize: '9.5px', fontWeight: 700, color: 'rgba(255,255,255,0.22)',
+                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                  padding: idx === 0 ? '2px 12px 6px' : '14px 12px 6px',
+                }}>{groupLabel}</div>
+              )}
+            <button onClick={() => handleNav(item.id)}
               title={collapsed ? label : ''}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
@@ -224,7 +241,17 @@ export default function Sidebar({ tab, setTab, collapsed, toggleCollapse, setSel
                   {alertCount > 99 ? '99+' : alertCount}
                 </span>
               )}
+              {!collapsed && item.recBadge && recCount > 0 && (
+                <span style={{
+                  background: '#818cf8', color: 'white', fontSize: '10px', fontWeight: 700,
+                  minWidth: 18, height: 18, borderRadius: 99,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+                }}>
+                  {recCount > 99 ? '99+' : recCount}
+                </span>
+              )}
             </button>
+            </React.Fragment>
           );
         })}
 

@@ -161,14 +161,20 @@ export default function Overview({ onSelectCampaign }) {
 
       {/* Decision Panel — DB recs or computed priorities */}
       {(scaleRecs?.length > 0 || pauseRecs?.length > 0 || testRecs?.length > 0) ? (
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>🎯 Painel de Decisão</div>
-            <span style={{ fontSize: '11px', color: 'var(--accent)', background: 'var(--accent-soft)', border: '1px solid var(--accent-border)', borderRadius: 999, padding: '3px 10px', fontWeight: 600 }}>
-              IA · Banco de dados
+        <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
+          <div className="decision-band" style={{ padding: '16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="live-dot" />
+              <span style={{ fontSize: '15px', fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>Painel de Decisão</span>
+              <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
+                · {(scaleRecs?.length || 0) + (pauseRecs?.length || 0) + (testRecs?.length || 0)} ações pendentes
+              </span>
+            </div>
+            <span style={{ fontSize: '11px', color: '#818cf8', background: 'rgba(129,140,248,0.15)', border: '1px solid rgba(129,140,248,0.28)', borderRadius: 999, padding: '3px 10px', fontWeight: 700, letterSpacing: '0.02em' }}>
+              ✦ IA · Banco de dados
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             <DecisionCol icon="🚀" label="Escalar" color="#10b981" bg="var(--success-soft)" border="var(--success)" recs={scaleRecs} campaigns={filteredCampaigns} onSelect={onSelectCampaign} />
             <DecisionCol icon="⏸" label="Pausar" color="var(--danger)" bg="var(--danger-soft)" border="var(--danger)" recs={pauseRecs} campaigns={filteredCampaigns} onSelect={onSelectCampaign} />
             <DecisionCol icon="🔬" label="Testar Criativo" color="var(--warning)" bg="var(--warning-soft)" border="var(--warning)" recs={testRecs} campaigns={filteredCampaigns} onSelect={onSelectCampaign} />
@@ -211,23 +217,21 @@ export default function Overview({ onSelectCampaign }) {
 
 function MetricCard({ label, value, color, icon, sparkData }) {
   return (
-    <div className="hover-card" style={{ ...card, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>{label}</div>
-          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.5px' }}>{value}</div>
-        </div>
-        <div style={{ width: 38, height: 38, borderRadius: 11, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+    <div className="hover-card" style={{ ...card, position: 'relative', overflow: 'hidden', padding: '18px 20px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.4 }}>{label}</span>
+        <div style={{ width: 34, height: 34, borderRadius: 9, background: color + '1a', border: `1px solid ${color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
           {icon}
         </div>
       </div>
+      <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '-0.8px' }}>{value}</div>
       {sparkData && sparkData.length > 3 && (
-        <div style={{ marginTop: 10, height: 40 }}>
-          <ResponsiveContainer width="100%" height={40}>
+        <div style={{ marginTop: 10, height: 36 }}>
+          <ResponsiveContainer width="100%" height={36}>
             <AreaChart data={sparkData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id={`sg-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.28} />
+                  <stop offset="5%" stopColor={color} stopOpacity={0.22} />
                   <stop offset="95%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               </defs>
@@ -236,23 +240,30 @@ function MetricCard({ label, value, color, icon, sparkData }) {
           </ResponsiveContainer>
         </div>
       )}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: color + '45', borderRadius: '0 0 var(--r-lg) var(--r-lg)' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${color}, ${color}55)` }} />
     </div>
   );
 }
 
 function RankCard({ title, items, field, fmt: fmtFn, onSelect, positive, negative }) {
+  const max = Math.max(...items.map(c => c[field] || 0), 0.01);
+  const valueColor = negative ? 'var(--danger)' : positive ? 'var(--success)' : 'var(--accent)';
   return (
     <div style={card}>
-      <SectionTitle>{title}</SectionTitle>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div className="section-header">{title}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {items.map((c, i) => (
           <div key={c.id} onClick={() => onSelect(c)} className="hover-bg"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px', borderRadius: 'var(--r-sm)', cursor: 'pointer', transition: 'background var(--t-fast)' }}
+            style={{ padding: '8px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer', transition: 'background var(--t-fast)' }}
           >
-            <span style={{ fontSize: '11px', color: 'var(--text-disabled)', fontWeight: 700, width: 16, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: negative ? 'var(--danger)' : positive ? 'var(--success)' : 'var(--accent)', flexShrink: 0 }}>{fmtFn(c[field])}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-disabled)', fontWeight: 800, width: 14, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: valueColor, flexShrink: 0 }}>{fmtFn(c[field])}</span>
+            </div>
+            <div style={{ marginLeft: 22, height: 3, background: 'var(--border-subtle)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 99, background: valueColor, width: ((c[field] || 0) / max * 100) + '%', opacity: 0.5, transition: 'width 0.6s' }} />
+            </div>
           </div>
         ))}
         {items.length === 0 && <EmptyState text="—" />}
@@ -263,7 +274,7 @@ function RankCard({ title, items, field, fmt: fmtFn, onSelect, positive, negativ
 
 function Chip({ val, color }) {
   return (
-    <span style={{ fontSize: '11px', fontWeight: 700, color, background: color + '18', padding: '2px 8px', borderRadius: 999 }}>{val}</span>
+    <span style={{ fontSize: '11px', fontWeight: 700, color, background: color + '18', padding: '2px 8px', borderRadius: 999, border: `1px solid ${color}25` }}>{val}</span>
   );
 }
 
@@ -272,22 +283,22 @@ function EmptyState({ text }) {
 }
 
 function SectionTitle({ children }) {
-  return <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, letterSpacing: '-0.1px' }}>{children}</div>;
+  return <div className="section-header">{children}</div>;
 }
 
 function DecisionCol({ icon, label, color, bg, border, recs, campaigns, onSelect }) {
   if (!recs?.length) return (
-    <div style={{ borderRadius: 'var(--r-md)', border: `1px dashed ${border}`, padding: '16px', opacity: 0.45, textAlign: 'center' }}>
-      <div style={{ fontSize: '22px', marginBottom: 6 }}>{icon}</div>
+    <div style={{ borderRadius: 'var(--r-md)', border: `1.5px dashed ${border}45`, padding: '20px 16px', opacity: 0.5, textAlign: 'center', background: bg }}>
+      <div style={{ fontSize: '24px', marginBottom: 6 }}>{icon}</div>
       <div style={{ fontSize: '12px', fontWeight: 700, color }}>{label}</div>
       <div style={{ fontSize: '11px', color: 'var(--text-disabled)', marginTop: 4 }}>Nenhuma agora</div>
     </div>
   );
   return (
     <div style={{ borderRadius: 'var(--r-md)', border: `1px solid ${border}`, background: bg, padding: '12px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, paddingBottom: 8, borderBottom: `1px solid ${border}45` }}>
         <span style={{ fontSize: '16px' }}>{icon}</span>
-        <span style={{ fontSize: '12px', fontWeight: 700, color }}>{label}</span>
+        <span style={{ fontSize: '12px', fontWeight: 800, color, letterSpacing: '-0.1px' }}>{label}</span>
         <span style={{ marginLeft: 'auto', background: color, color: 'white', fontSize: '10px', fontWeight: 800, borderRadius: 99, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>{recs.length}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -295,27 +306,32 @@ function DecisionCol({ icon, label, color, bg, border, recs, campaigns, onSelect
           const camp = campaigns.find(c => c.id === r.entity_id || c.name === r.entity_name);
           return (
             <div key={i} onClick={() => camp && onSelect(camp)}
-              style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '8px 10px', cursor: camp ? 'pointer' : 'default', transition: 'all var(--t-fast)', border: '1px solid var(--border)' }}
-              onMouseEnter={e => { if (camp) { e.currentTarget.style.borderColor = border; e.currentTarget.style.transform = 'translateY(-1px)'; }}}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}
+              style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '10px 12px', cursor: camp ? 'pointer' : 'default', transition: 'all var(--t-fast)', border: '1px solid var(--border)' }}
+              onMouseEnter={e => { if (camp) { e.currentTarget.style.borderColor = border; e.currentTarget.style.boxShadow = `0 2px 10px ${border}28`; e.currentTarget.style.transform = 'translateY(-1px)'; }}}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
             >
-              <div style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 5 }}>
                 {r.entity_name || '—'}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                {r.message || r.reason || '—'}
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: (r.message || r.reason) ? 5 : 0 }}>
+                {camp && camp.spend > 0 && (
+                  <span style={{ fontSize: '10px', fontWeight: 700, color, background: color + '15', padding: '1px 7px', borderRadius: 99 }}>{fmtBRL(camp.spend)}</span>
+                )}
+                {camp && camp.roas > 0 && (
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: camp.roas >= 3 ? '#10b981' : camp.roas >= 1.5 ? '#f59e0b' : '#ef4444', background: (camp.roas >= 3 ? '#10b981' : camp.roas >= 1.5 ? '#f59e0b' : '#ef4444') + '15', padding: '1px 7px', borderRadius: 99 }}>
+                    {camp.roas.toFixed(1)}x ROAS
+                  </span>
+                )}
               </div>
-              {r.metric_value != null && (
-                <div style={{ fontSize: '10.5px', color, fontWeight: 700, marginTop: 4 }}>
-                  Valor: {typeof r.metric_value === 'number' ? r.metric_value.toFixed(2) : r.metric_value}
-                </div>
+              {(r.message || r.reason) && (
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{r.message || r.reason}</div>
               )}
             </div>
           );
         })}
         {recs.length > 4 && (
-          <div style={{ fontSize: '11px', color, textAlign: 'center', fontWeight: 600, padding: '4px 0' }}>
-            +{recs.length - 4} mais
+          <div style={{ fontSize: '11px', color, textAlign: 'center', fontWeight: 700, padding: '4px 0', background: color + '0d', borderRadius: 'var(--r-sm)' }}>
+            +{recs.length - 4} campanhas
           </div>
         )}
       </div>
@@ -327,7 +343,7 @@ const card = {
   background: 'var(--bg-card)',
   border: '1px solid var(--border)',
   borderRadius: 'var(--r-lg)',
-  padding: '18px 20px',
+  padding: '20px',
   boxShadow: 'var(--shadow-sm)',
   transition: 'box-shadow var(--t-base)',
 };
