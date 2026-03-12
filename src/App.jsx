@@ -14,7 +14,7 @@ import TopBar from './components/TopBar.jsx';
 import SearchBar from './components/SearchBar.jsx';
 import Overview from './components/Overview.jsx';
 import CampaignTable from './components/CampaignTable.jsx';
-import CampaignDetail from './components/CampaignDetail.jsx';
+import CampaignExplorer from './components/CampaignExplorer.jsx';
 import TimeSeriesChart from './components/TimeSeriesChart.jsx';
 import ConversionsPage from './components/ConversionsPage.jsx';
 import AlertsPage from './components/AlertsPage.jsx';
@@ -33,7 +33,15 @@ export default function App() {
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [selectedCampaign, setSelectedCampaignRaw] = useState(null);
+  const [explorerCampaigns, setExplorerCampaigns] = useState([]);
+  // setSelectedCampaign(c) opens the explorer with a single campaign
+  const setSelectedCampaign = (c) => {
+    if (!c) { setExplorerCampaigns([]); setSelectedCampaignRaw(null); return; }
+    setExplorerCampaigns([c]);
+    setSelectedCampaignRaw(c);
+  };
+  const openExplorer = (camps) => setExplorerCampaigns(camps);
   const [pinnedIds, setPinnedIds] = useState(new Set());
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -283,7 +291,8 @@ export default function App() {
           alertCount={alertsHook.criticalCount} />
         <div style={{ flex: 1, marginLeft: mainPad, transition: 'margin-left 0.25s', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
           <TopBar lang={lang} setLang={setLang} tab={tab}
-            selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign} />
+            selectedCampaign={explorerCampaigns[0] || null}
+            setSelectedCampaign={() => setExplorerCampaigns([])} />
 
           {loading && (
             <div style={{ background: 'var(--info-soft)', borderBottom: '1px solid var(--accent-border)', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--accent)' }}>
@@ -299,15 +308,15 @@ export default function App() {
           )}
 
           <main style={{ flex: 1, padding: '24px', maxWidth: '1480px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-            {!selectedCampaign && tab !== 'alerts' && (tab === 'overview' || tab === 'campaigns' || tab === 'charts' || tab === 'conversions') && (
+            {explorerCampaigns.length === 0 && tab !== 'alerts' && (tab === 'overview' || tab === 'campaigns' || tab === 'charts' || tab === 'conversions') && (
               <SearchBar />
             )}
-            {selectedCampaign ? (
-              <CampaignDetail campaign={selectedCampaign} onBack={() => setSelectedCampaign(null)} />
+            {explorerCampaigns.length > 0 ? (
+              <CampaignExplorer campaigns={explorerCampaigns} onBack={() => setExplorerCampaigns([])} />
             ) : tab === 'overview' ? (
               <Overview onSelectCampaign={setSelectedCampaign} />
             ) : tab === 'campaigns' ? (
-              <CampaignTable onSelectCampaign={setSelectedCampaign} />
+              <CampaignTable onSelectCampaign={setSelectedCampaign} openExplorer={openExplorer} />
             ) : tab === 'charts' ? (
               <TimeSeriesChart />
             ) : tab === 'conversions' ? (

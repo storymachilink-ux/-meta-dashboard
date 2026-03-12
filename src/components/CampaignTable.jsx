@@ -2,14 +2,29 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { fmtBRL, fmtInt, fmtPct, scoreColor, calcScore } from '../utils.js';
 
-export default function CampaignTable({ onSelectCampaign }) {
+export default function CampaignTable({ onSelectCampaign, openExplorer }) {
   const { t, filteredCampaigns, pinnedIds, togglePin, showPinnedOnly, setShowPinnedOnly,
     searchQuery, setSearchQuery, objectiveFilter, setObjectiveFilter, objectives, days } = useApp();
 
   const [sortKey, setSortKey] = useState('spend');
   const [sortDir, setSortDir] = useState('desc');
   const [page, setPage] = useState(0);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const PAGE_SIZE = 25;
+
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+  const openSelected = () => {
+    const camps = sorted.filter(c => selectedIds.has(c.id));
+    if (camps.length > 0 && openExplorer) openExplorer(camps);
+  };
 
   const sorted = useMemo(() => {
     return [...filteredCampaigns].map(c => ({ ...c, score: calcScore(c) })).sort((a, b) => {
@@ -55,6 +70,7 @@ export default function CampaignTable({ onSelectCampaign }) {
   };
 
   const COLS = [
+    { key: '_select',    label: '',                    w: 36,  sortable: false },
     { key: '_pin',       label: '',                    w: 36,  sortable: false },
     { key: 'name',       label: t.table.campaign,      w: 220 },
     { key: 'account',    label: t.table.account,       w: 120 },
@@ -73,6 +89,14 @@ export default function CampaignTable({ onSelectCampaign }) {
 
   const renderCell = (c, key) => {
     switch (key) {
+      case '_select':
+        return (
+          <input type="checkbox" checked={selectedIds.has(c.id)}
+            onChange={e => toggleSelect(c.id, e)}
+            onClick={e => e.stopPropagation()}
+            style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--accent)' }}
+          />
+        );
       case '_pin':
         return (
           <button onClick={e => { e.stopPropagation(); togglePin(c.id); }} title={t.pinHint}
@@ -122,6 +146,36 @@ export default function CampaignTable({ onSelectCampaign }) {
 
   return (
     <div>
+      {/* Multi-select floating bar */}
+      {selectedIds.size > 0 && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'var(--accent)', borderRadius: 'var(--r-md)',
+          padding: '10px 18px', marginBottom: 12,
+          boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
+        }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'white', flex: 1 }}>
+            {selectedIds.size} campanha{selectedIds.size > 1 ? 's' : ''} selecionada{selectedIds.size > 1 ? 's' : ''}
+          </span>
+          <button onClick={openSelected} style={{
+            background: 'white', color: 'var(--accent)', border: 'none',
+            borderRadius: 'var(--r-sm)', padding: '7px 18px',
+            cursor: 'pointer', fontSize: '13px', fontWeight: 800,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}>
+            🔍 Abrir {selectedIds.size > 1 ? 'comparação' : 'detalhe'}
+          </button>
+          <button onClick={clearSelection} style={{
+            background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none',
+            borderRadius: 'var(--r-sm)', padding: '7px 12px',
+            cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+          }}>
+            ✕ Limpar
+          </button>
+        </div>
+      )}
+
       {/* Filters bar */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
@@ -189,8 +243,8 @@ export default function CampaignTable({ onSelectCampaign }) {
               {paginated.map((c) => (
                 <tr key={c.id}
                   onClick={() => onSelectCampaign(c)}
-                  className={`table-row${pinnedIds.has(c.id) ? ' pinned' : ''}`}
-                  style={{ borderBottom: '1px solid var(--border-subtle)' }}
+                  className={`table-row${pinnedIds.has(c.id) ? ' pinned' : ''}${selectedIds.has(c.id) ? ' is-selected' : ''}`}
+                  style={{ borderBottom: '1px solid var(--border-subtle)', background: selectedIds.has(c.id) ? 'var(--accent-soft)' : undefined }}
                 >
                   {COLS.map(col => (
                     <td key={col.key} style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
