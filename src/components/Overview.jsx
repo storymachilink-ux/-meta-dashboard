@@ -1,8 +1,23 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { fmtBRL, fmtInt, fmtPct, fmt, scoreColor } from '../utils.js';
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import PeriodPills from './PeriodPills.jsx';
+
+const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function loadTimeWindows() {
+  try {
+    const v = localStorage.getItem('meta_time_windows');
+    if (v) return JSON.parse(v);
+  } catch {}
+  return [
+    { id: 'manha',     label: 'Manhã',     icon: '🌅', start: '07', end: '09' },
+    { id: 'tarde',     label: 'Tarde',     icon: '☀️', start: '12', end: '15' },
+    { id: 'noite',     label: 'Noite',     icon: '🌙', start: '19', end: '22' },
+    { id: 'madrugada', label: 'Madrugada', icon: '🌃', start: '00', end: '03' },
+  ];
+}
 
 export default function Overview({ onSelectCampaign }) {
   const { t, summary, filteredCampaigns, filteredDaily, days, periodMetrics,
@@ -41,6 +56,45 @@ export default function Overview({ onSelectCampaign }) {
   const highFreq = useMemo(() => filteredCampaigns.filter(c => c.frequency > 2).sort((a, b) => b.frequency - a.frequency).slice(0, 5), [filteredCampaigns]);
 
   const periodLabel = days <= 3 ? `${days} dias` : days === 7 ? '7 dias' : days === 15 ? '15 dias' : days === 30 ? 'mês' : `${days} dias`;
+
+  // Melhores dias por dia da semana
+  const bestDaysByWeekday = useMemo(() => {
+    const map = {}; // weekday 0-6 → {spend, revenue, purchases, days}
+    filteredDaily.forEach(d => {
+      const wd = new Date(d.date + 'T12:00:00').getDay();
+      if (!map[wd]) map[wd] = { spend: 0, revenue: 0, purchases: 0, days: 0 };
+      map[wd].spend    += d.spend    || 0;
+      map[wd].revenue  += d.revenue  || 0;
+      map[wd].purchases+= d.purchases|| 0;
+      map[wd].days++;
+    });
+    return DAY_NAMES.map((name, wd) => {
+      const m = map[wd] || { spend: 0, revenue: 0, purchases: 0, days: 0 };
+      const roas  = m.spend > 0 ? m.revenue / m.spend : 0;
+      const avgSpend = m.days > 0 ? m.spend / m.days : 0;
+      return { name, wd, roas, avgSpend, purchases: m.purchases, revenue: m.revenue, spend: m.spend, days: m.days };
+    });
+  }, [filteredDaily]);
+
+  // Melhores dias por data (últimos 7 dias com spend)
+  const last7DaysPerf = useMemo(() => {
+    const map = {};
+    filteredDaily.forEach(d => {
+      if (!map[d.date]) map[d.date] = { spend: 0, revenue: 0, purchases: 0 };
+      map[d.date].spend     += d.spend    || 0;
+      map[d.date].revenue   += d.revenue  || 0;
+      map[d.date].purchases += d.purchases|| 0;
+    });
+    return Object.entries(map)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 7)
+      .map(([date, m]) => ({
+        date: date.slice(5), // MM-DD
+        roas: m.spend > 0 ? m.revenue / m.spend : 0,
+        spend: m.spend, revenue: m.revenue, purchases: m.purchases,
+      }))
+      .reverse();
+  }, [filteredDaily]);
 
   const priorities = useMemo(() => {
     const byCampaign = {};
@@ -158,6 +212,68 @@ export default function Overview({ onSelectCampaign }) {
         <RankCard title={`⚠️ ${t.worstCTR}`}  items={worstCTR}  field="ctr"       fmt={(v) => v.toFixed(2) + '%'}      onSelect={onSelectCampaign} negative />
         <RankCard title={`🔁 ${t.highFreq}`}  items={highFreq}  field="frequency" fmt={(v) => v.toFixed(2) + 'x'}      onSelect={onSelectCampaign} negative />
       </div>
+
+      {/* Melhores Dias */}
+      {filteredDaily.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+          {/* Por dia da semana */}
+          <div style={card}>
+            <SectionTitle>📅 Performance por Dia da Semana</SectionTitle>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[...bestDaysByWeekday].sort((a, b) => b.roas - a.roas).map((d, i) => {
+                const maxRoas = Math.max(...bestDaysByWeekday.map(x => x.roas), 0.01);
+                const pct = Math.round((d.roas / maxRoas) * 100);
+                const col = d.roas >= 3 ? '#10b981' : d.roas >= 1.5 ? '#f59e0b' : d.days === 0 ? '#94a3b8' : '#ef4444';
+                return (
+                  <div key={d.wd} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', width: 26, flexShrink: 0 }}>{d.name}</span>
+                    <div style={{ flex: 1, background: 'var(--border-subtle)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: pct + '%', background: col, borderRadius: 99, transition: 'width 0.6s' }} />
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: col, width: 40, textAlign: 'right', flexShrink: 0 }}>
+                      {d.days === 0 ? '—' : d.roas.toFixed(1) + 'x'}
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', width: 50, textAlign: 'right', flexShrink: 0 }}>
+                      {d.purchases > 0 ? `${d.purchases} vnd` : ''}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Últimos 7 dias */}
+          <div style={card}>
+            <SectionTitle>📊 Últimos 7 Dias</SectionTitle>
+            {last7DaysPerf.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={last7DaysPerf} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    formatter={(v, name) => name === 'roas' ? [v.toFixed(2) + 'x', 'ROAS'] : [fmtBRL(v), 'Gasto']}
+                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11 }}
+                    labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
+                  />
+                  <Bar dataKey="roas" radius={[4, 4, 0, 0]}>
+                    {last7DaysPerf.map((d, i) => (
+                      <Cell key={i} fill={d.roas >= 3 ? '#10b981' : d.roas >= 1.5 ? '#f59e0b' : d.roas > 0 ? '#ef4444' : '#94a3b855'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState text="Dados insuficientes para o período" />
+            )}
+            <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+              {last7DaysPerf.slice(-7).sort((a, b) => b.roas - a.roas).slice(0, 3).map((d, i) => (
+                <span key={i} style={{ fontSize: '10px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px', color: 'var(--text-muted)' }}>
+                  {['🥇','🥈','🥉'][i]} {d.date} · {d.roas.toFixed(1)}x
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Decision Panel — DB recs or computed priorities */}
       {(scaleRecs?.length > 0 || pauseRecs?.length > 0 || testRecs?.length > 0) ? (

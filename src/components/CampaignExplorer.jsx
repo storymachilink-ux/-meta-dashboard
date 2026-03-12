@@ -323,7 +323,7 @@ function CreativeModal({ item, onClose }) {
 // ─── Single Campaign View ─────────────────────────────────────────────────────
 
 function CampaignView({ campaign, apiCreativesCache, onCreativesFetched }) {
-  const { filteredDaily, t } = useApp();
+  const { filteredDaily, t, cutoffDate, endDate, effectiveDays } = useApp();
   const [creativeModal, setCreativeModal] = useState(null);
 
   const tier = getPerfTier(campaign);
@@ -421,21 +421,28 @@ function CampaignView({ campaign, apiCreativesCache, onCreativesFetched }) {
               )}
             </div>
 
-            {/* Perf badge */}
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 12,
-              fontWeight: 700,
-              color: perf.color,
-              background: perf.bg,
-              border: `1px solid ${perf.border}`,
-              borderRadius: 'var(--r-sm)',
-              padding: '3px 10px',
-            }}>
-              {PERF_LABEL[tier]}
-            </span>
+            {/* Perf badge + data window */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: 12, fontWeight: 700, color: perf.color,
+                background: perf.bg, border: `1px solid ${perf.border}`,
+                borderRadius: 'var(--r-sm)', padding: '3px 10px',
+              }}>
+                {PERF_LABEL[tier]}
+              </span>
+              {cutoffDate && endDate && (
+                <span style={{
+                  fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
+                  background: 'var(--bg-subtle)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-sm)', padding: '3px 10px',
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}>
+                  📆 Dados: {fmtDate(cutoffDate)} → {fmtDate(endDate)}
+                  <span style={{ color: 'var(--accent)', fontWeight: 700 }}>· {effectiveDays}d</span>
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Score circle */}

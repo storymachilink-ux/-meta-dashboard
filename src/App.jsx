@@ -19,6 +19,7 @@ import TimeSeriesChart from './components/TimeSeriesChart.jsx';
 import ConversionsPage from './components/ConversionsPage.jsx';
 import AlertsPage from './components/AlertsPage.jsx';
 import RecommendationsPage from './components/RecommendationsPage.jsx';
+import ProfilePage from './components/ProfilePage.jsx';
 
 
 const DAY_PRESETS = [3, 5, 7, 12, 15, 20, 30, 60, 90];
@@ -31,6 +32,14 @@ export default function App() {
   });
   const [days, setDays] = useState(30);
   const [selectedAccount, setSelectedAccount] = useState('all');
+  // Profile: active accounts from localStorage (null = all)
+  const [activeAccounts, setActiveAccounts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('meta_active_accounts');
+      if (saved) { const arr = JSON.parse(saved); return arr.length ? new Set(arr) : null; }
+    } catch {}
+    return null;
+  });
   const [objectiveFilter, setObjectiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampaign, setSelectedCampaignRaw] = useState(null);
@@ -170,7 +179,11 @@ export default function App() {
 
   const enrichedCampaigns = useMemo(() => {
     return allCampaigns
-      .filter(c => selectedAccount === 'all' || c.account === selectedAccount)
+      .filter(c => {
+        if (selectedAccount !== 'all' && c.account !== selectedAccount) return false;
+        if (activeAccounts !== null && !activeAccounts.has(c.account)) return false;
+        return true;
+      })
       .map(c => {
         if (liveData) return { ...c, _period: true, _live: true };
         const pm = periodMetrics[c.id];
@@ -181,7 +194,7 @@ export default function App() {
         }
         return { ...c, _period: false };
       });
-  }, [allCampaigns, periodMetrics, liveData, selectedAccount]);
+  }, [allCampaigns, periodMetrics, liveData, selectedAccount, activeAccounts]);
 
   const filteredCampaigns = useMemo(() => {
     return enrichedCampaigns.filter(c => {
@@ -247,6 +260,8 @@ export default function App() {
     pinnedIds, togglePin, showPinnedOnly, setShowPinnedOnly,
     filteredCampaigns, filteredDaily, summary, objectives,
     allCampaigns: enrichedCampaigns,
+    rawCampaigns: allCampaigns,
+    activeAccounts, setActiveAccounts,
     cutoffDate, endDate, sidebarCollapsed,
     chatHistory, setChatHistory, handleAsk,
     periodMetrics,
@@ -325,6 +340,8 @@ export default function App() {
               <AlertsPage />
             ) : tab === 'recommendations' ? (
               <RecommendationsPage onSelectCampaign={setSelectedCampaign} />
+            ) : tab === 'profile' ? (
+              <ProfilePage />
             ) : (
               <ComingSoon tab={tab} t={t} />
             )}
