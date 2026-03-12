@@ -51,23 +51,6 @@ export default function App() {
   const alertsHook = useAlerts({ autoRefresh: true });
   const recsHook = useRecommendations();
 
-  // Sync manual trigger
-  const [syncing, setSyncing] = useState(false);
-  const triggerSync = useCallback(async () => {
-    setSyncing(true);
-    try {
-      await triggerIncremental();
-      await triggerRules();
-      setTimeout(() => {
-        alertsHook.reload();
-        recsHook.reload();
-        fetchLive(cutoffDate, endDate);
-      }, 8000);
-    } catch {} finally {
-      setTimeout(() => setSyncing(false), 8000);
-    }
-  }, [alertsHook, recsHook, cutoffDate, endDate, fetchLive]);
-
   // Apply theme to <html>
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -127,6 +110,23 @@ export default function App() {
   useEffect(() => {
     fetchLive(cutoffDate, endDate);
   }, [cutoffDate, endDate, fetchLive]);
+
+  // Sync manual trigger — definido APÓS cutoffDate, endDate e fetchLive
+  const [syncing, setSyncing] = useState(false);
+  const triggerSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      await triggerIncremental();
+      await triggerRules();
+      setTimeout(() => {
+        alertsHook.reload();
+        recsHook.reload();
+        fetchLive(cutoffDate, endDate);
+      }, 8000);
+    } catch {} finally {
+      setTimeout(() => setSyncing(false), 8000);
+    }
+  }, [alertsHook, recsHook, cutoffDate, endDate, fetchLive]);
 
   const allCampaigns = liveData?.campaigns || staticCampaigns;
   const allDailyData = liveData?.daily || staticDailyData;
