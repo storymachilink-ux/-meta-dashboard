@@ -2,22 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../App.jsx';
 
 const TAB_TITLES = {
-  overview: { pt: 'Visão Geral', en: 'Overview' },
-  campaigns: { pt: 'Campanhas', en: 'Campaigns' },
-  charts: { pt: 'Gráficos', en: 'Charts' },
-  conversions: { pt: 'Conversões', en: 'Conversions' },
-  audience: { pt: 'Público', en: 'Audience' },
-  devices: { pt: 'Dispositivos', en: 'Devices' },
-  reports: { pt: 'Relatórios', en: 'Reports' },
+  overview:    { pt: 'Visão Geral',    en: 'Overview' },
+  campaigns:   { pt: 'Campanhas',      en: 'Campaigns' },
+  charts:      { pt: 'Gráficos',       en: 'Charts' },
+  conversions: { pt: 'Conversões',     en: 'Conversions' },
+  alerts:      { pt: 'Alertas',        en: 'Alerts' },
+  audience:    { pt: 'Público',        en: 'Audience' },
+  devices:     { pt: 'Dispositivos',   en: 'Devices' },
+  reports:     { pt: 'Relatórios',     en: 'Reports' },
 };
 const TAB_SUBS = {
-  overview: { pt: 'Resumo de performance das campanhas', en: 'Campaign performance summary' },
-  campaigns: { pt: 'Análise detalhada por campanha', en: 'Detailed campaign analysis' },
-  charts: { pt: 'Tendências e evolução temporal', en: 'Trends and time evolution' },
-  conversions: { pt: 'Compras, ROAS e receita', en: 'Purchases, ROAS and revenue' },
-  audience: { pt: 'Dados de público e alcance', en: 'Audience and reach data' },
-  devices: { pt: 'Performance por dispositivo', en: 'Performance by device' },
-  reports: { pt: 'Exportação e agendamento', en: 'Export and scheduling' },
+  overview:    { pt: 'Resumo de performance das campanhas',    en: 'Campaign performance summary' },
+  campaigns:   { pt: 'Análise detalhada por campanha',         en: 'Detailed campaign analysis' },
+  charts:      { pt: 'Tendências e evolução temporal',         en: 'Trends and time evolution' },
+  conversions: { pt: 'Compras, ROAS e receita',                en: 'Purchases, ROAS and revenue' },
+  alerts:      { pt: 'Monitoramento automático de campanhas',  en: 'Automated campaign monitoring' },
+  audience:    { pt: 'Dados de público e alcance',             en: 'Audience and reach data' },
+  devices:     { pt: 'Performance por dispositivo',            en: 'Performance by device' },
+  reports:     { pt: 'Exportação e agendamento',               en: 'Export and scheduling' },
 };
 
 const ACCOUNTS_OPTS = [
@@ -54,7 +56,7 @@ export default function TopBar({ lang, setLang, tab, selectedCampaign, setSelect
   const {
     t, days, setDays, selectedAccount, setSelectedAccount, pinnedIds, cutoffDate,
     dateMode, setDateMode, customDateStart, setCustomDateStart, customDateEnd, setCustomDateEnd,
-    endDate, TODAY, loading, lastUpdated, refreshData, isLive,
+    endDate, TODAY, loading, lastUpdated, refreshData, isLive, syncing, triggerSync,
   } = useApp();
 
   const [open, setOpen] = useState(false);
@@ -313,6 +315,23 @@ export default function TopBar({ lang, setLang, tab, selectedCampaign, setSelect
           >
             <span style={{ display: 'inline-block', animation: loading ? 'spin 0.7s linear infinite' : 'none' }}>↻</span>
             {loading ? 'Buscando...' : 'Atualizar'}
+          </button>
+          <button
+            onClick={triggerSync}
+            disabled={syncing}
+            title="Sincronizar Meta API → Banco + rodar regras de alerta"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              background: syncing ? '#f0fdf4' : '#f0fdf4',
+              border: '1px solid ' + (syncing ? '#86efac' : '#bbf7d0'),
+              borderRadius: '10px', padding: '8px 12px',
+              cursor: syncing ? 'default' : 'pointer',
+              fontSize: '13px', color: syncing ? '#15803d' : '#16a34a',
+              fontWeight: 600, boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            }}
+          >
+            <span style={{ display: 'inline-block', animation: syncing ? 'spin 0.7s linear infinite' : 'none' }}>⟳</span>
+            {syncing ? 'Sincronizando...' : 'Sync'}
           </button>
         </div>
 

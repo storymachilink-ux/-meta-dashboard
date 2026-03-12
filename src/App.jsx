@@ -6,6 +6,8 @@ import { adsetsData } from './adsetsData.js';
 import { translations } from './i18n.js';
 import { buildAnswer } from './chatEngine.js';
 import { useAlerts } from './hooks/useAlerts.js';
+import { useRecommendations } from './hooks/useRecommendations.js';
+import { triggerIncremental, triggerRules } from './lib/api.js';
 import Sidebar from './components/Sidebar.jsx';
 import TopBar from './components/TopBar.jsx';
 import SearchBar from './components/SearchBar.jsx';
@@ -45,6 +47,24 @@ export default function App() {
 
   // Alertas do banco (Sprint 4)
   const alertsHook = useAlerts({ autoRefresh: true });
+  const recsHook = useRecommendations();
+
+  // Sync manual trigger
+  const [syncing, setSyncing] = useState(false);
+  const triggerSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      await triggerIncremental();
+      await triggerRules();
+      setTimeout(() => {
+        alertsHook.reload();
+        recsHook.reload();
+        fetchLive(cutoffDate, endDate);
+      }, 8000);
+    } catch {} finally {
+      setTimeout(() => setSyncing(false), 8000);
+    }
+  }, [alertsHook, recsHook, cutoffDate, endDate, fetchLive]);
 
   const TODAY = new Date().toISOString().slice(0, 10);
   const t = translations[lang];
@@ -210,6 +230,16 @@ export default function App() {
     criticalAlerts: alertsHook.criticalCount,
     dismissAlert:  alertsHook.dismiss,
     reloadAlerts:  alertsHook.reload,
+    // Recomendações do banco
+    recommendations:  recsHook.recommendations,
+    recsLoading:      recsHook.loading,
+    scaleRecs:        recsHook.scaleRecs,
+    pauseRecs:        recsHook.pauseRecs,
+    reviewRecs:       recsHook.reviewRecs,
+    testRecs:         recsHook.testRecs,
+    reloadRecs:       recsHook.reload,
+    // Sync manual
+    syncing, triggerSync,
   };
 
   const mainPad = sidebarCollapsed ? '72px' : '240px';
