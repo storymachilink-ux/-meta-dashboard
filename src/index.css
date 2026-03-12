@@ -66,18 +66,18 @@
 
 /* ── Dark Mode ── */
 [data-theme="dark"] {
-  --bg-page:              #0c111c;
-  --bg-card:              #111827;
-  --bg-topbar:            #0f1623;
-  --bg-input:             #182033;
-  --bg-subtle:            #0f1828;
-  --bg-sidebar:           #080d17;
+  --bg-page:              #080d18;
+  --bg-card:              rgba(255,255,255,0.045);
+  --bg-topbar:            rgba(8,13,24,0.88);
+  --bg-input:             rgba(255,255,255,0.06);
+  --bg-subtle:            rgba(255,255,255,0.025);
+  --bg-sidebar:           #060a14;
   --bg-sidebar-hover:     rgba(255,255,255,0.05);
   --bg-sidebar-active:    rgba(129,140,248,0.18);
 
-  --border:               #1d2a42;
-  --border-subtle:        #162034;
-  --border-input:         #253048;
+  --border:               rgba(255,255,255,0.09);
+  --border-subtle:        rgba(255,255,255,0.05);
+  --border-input:         rgba(255,255,255,0.12);
 
   --text-primary:         #e0e8ff;
   --text-secondary:       #8896b0;
@@ -86,23 +86,35 @@
 
   --accent:               #818cf8;
   --accent-hover:         #929bf9;
-  --accent-soft:          #1b2050;
-  --accent-border:        #2d3878;
+  --accent-soft:          rgba(129,140,248,0.15);
+  --accent-border:        rgba(129,140,248,0.3);
 
   --success:              #34d399;
-  --success-soft:         #052e18;
+  --success-soft:         rgba(52,211,153,0.1);
   --warning:              #fbbf24;
-  --warning-soft:         #2a1e04;
+  --warning-soft:         rgba(251,191,36,0.1);
   --danger:               #f87171;
-  --danger-soft:          #2a0a0a;
+  --danger-soft:          rgba(248,113,113,0.1);
   --info:                 #38bdf8;
-  --info-soft:            #041e38;
+  --info-soft:            rgba(56,189,248,0.1);
 
-  --shadow-xs:  0 1px 2px rgba(0,0,0,0.3);
-  --shadow-sm:  0 1px 4px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.2);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.22);
-  --shadow-lg:  0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.28);
-  --shadow-popup: 0 20px 56px rgba(0,0,0,0.6), 0 6px 18px rgba(0,0,0,0.35);
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.4);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:  0 4px 20px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.65), 0 4px 14px rgba(0,0,0,0.4);
+  --shadow-popup: 0 20px 56px rgba(0,0,0,0.75), 0 6px 20px rgba(0,0,0,0.5);
+}
+
+/* ── Glass effect — dark mode cards ── */
+[data-theme="dark"] .hover-card {
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-color: rgba(255,255,255,0.08) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+}
+[data-theme="dark"] .hover-card:hover {
+  border-color: rgba(129,140,248,0.35) !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.09) !important;
 }
 
 /* ── Reset & Base ── */
