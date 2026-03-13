@@ -30,6 +30,8 @@ export default function Overview({ onSelectCampaign }) {
   const { totalSpend, totalImpressions, totalClicks, avgCTR, avgCPC, avgCPM,
     totalPurchases, totalRevenue, avgROAS, totalReach, totalEngagement } = summary;
 
+  const totalLucro = totalRevenue - totalSpend;
+
   const spendByDay = useMemo(() => {
     const map = {};
     filteredDaily.forEach(d => { map[d.date] = (map[d.date] || 0) + d.spend; });
@@ -51,6 +53,7 @@ export default function Overview({ onSelectCampaign }) {
     { key: 'cpm',          value: fmtBRL(avgCPM),               color: '#06b6d4', spark: [],          icon: '📡' },
     { key: 'purchases',    value: fmtInt(totalPurchases),       color: '#10b981', spark: [],          icon: '🛒' },
     { key: 'roas',         value: fmt(avgROAS) + 'x',           color: avgROAS >= 3 ? '#10b981' : avgROAS >= 1.5 ? '#f59e0b' : '#ef4444', spark: [], icon: '📈' },
+    { key: 'lucro',        value: fmtBRL(totalLucro),           color: totalLucro >= 0 ? '#10b981' : '#ef4444', spark: [], icon: '💵', label: 'Lucro' },
     { key: 'reach',        value: fmtInt(totalReach),           color: '#a78bfa', spark: [],          icon: '🎯' },
   ];
 
@@ -216,7 +219,7 @@ export default function Overview({ onSelectCampaign }) {
       {/* Metric cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 14, marginBottom: 24 }}>
         {metrics.map(m => (
-          <MetricCard key={m.key} label={t.metrics[m.key]} value={m.value} color={m.color} icon={m.icon} sparkData={m.spark} />
+          <MetricCard key={m.key} label={m.label || t.metrics[m.key]} value={m.value} color={m.color} icon={m.icon} sparkData={m.spark} />
         ))}
       </div>
 
@@ -249,6 +252,7 @@ export default function Overview({ onSelectCampaign }) {
               <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>{c.name}</span>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 <Chip val={fmtBRL(c.spend)} color="#6366f1" />
+                {(c.revenue || 0) > 0 && (() => { const l = (c.revenue||0) - c.spend; return <Chip val={(l >= 0 ? '+' : '') + fmtBRL(l)} color={l >= 0 ? '#10b981' : '#ef4444'} />; })()}
                 <Chip val={c.roas > 0 ? c.roas.toFixed(2) + 'x' : '—'} color={c.roas >= 3 ? '#10b981' : c.roas >= 1.5 ? '#f59e0b' : '#ef4444'} />
               </div>
             </div>
@@ -365,9 +369,12 @@ export default function Overview({ onSelectCampaign }) {
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.18)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 700, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>{c.name}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>{fmtBRL(spend || c.spend)}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{fmtBRL(spend || c.spend)}</span>
+                    {(c.revenue || 0) > 0 && (() => { const l = (c.revenue||0) - (spend||c.spend); return <span style={{ fontSize: '10px', fontWeight: 700, color: l >= 0 ? '#10b981' : '#ef4444' }}>{l >= 0 ? '+' : ''}{fmtBRL(l)} lucro</span>; })()}
+                  </div>
                 </div>
                 {recs.slice(0, 2).map((r, i) => (
                   <div key={i} style={{ fontSize: '11.5px', color: r.type === 'danger' ? 'var(--danger)' : 'var(--warning)', display: 'flex', gap: 5, marginTop: 4, lineHeight: 1.45 }}>
@@ -474,6 +481,7 @@ function RankCard({ title, items, field, fmt: fmtFn, onSelect, positive, negativ
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span style={{ fontSize: '10px', color: 'var(--text-disabled)', fontWeight: 800, width: 14, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
               <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+              {field === 'spend' && (c.revenue || 0) > 0 && (() => { const l = (c.revenue||0) - c.spend; return <span style={{ fontSize: '10px', fontWeight: 700, color: l >= 0 ? '#10b981' : '#ef4444', flexShrink: 0 }}>{l >= 0 ? '+' : ''}{fmtBRL(l)}</span>; })()}
               <span style={{ fontSize: '12px', fontWeight: 800, color: valueColor, flexShrink: 0 }}>{fmtFn(c[field])}</span>
             </div>
             <div style={{ marginLeft: 22, height: 3, background: 'var(--border-subtle)', borderRadius: 99, overflow: 'hidden' }}>
@@ -542,6 +550,13 @@ function DecisionCol({ icon, label, color, bg, border, recs, campaigns, onSelect
                     {camp.roas.toFixed(1)}x ROAS
                   </span>
                 )}
+                {camp && camp.spend > 0 && (camp.revenue || 0) > 0 && (() => {
+                  const lucro = (camp.revenue || 0) - camp.spend;
+                  const lc = lucro >= 0 ? '#10b981' : '#ef4444';
+                  return <span style={{ fontSize: '10px', fontWeight: 700, color: lc, background: lc + '15', padding: '1px 7px', borderRadius: 99 }}>
+                    {lucro >= 0 ? '+' : ''}{fmtBRL(lucro)} lucro
+                  </span>;
+                })()}
               </div>
               {(r.message || r.reason) && (
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{r.message || r.reason}</div>
@@ -613,6 +628,11 @@ function WindowCard({ data, onSelectCampaign }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 10px' }}>
         <Stat label="Gasto"    value={fmtBRL(spend)} />
         <Stat label="Receita"  value={fmtBRL(revenue)} />
+        {spend > 0 && (() => {
+          const lucro = revenue - spend;
+          const lc = lucro >= 0 ? '#10b981' : '#ef4444';
+          return <Stat label="Lucro" value={(lucro >= 0 ? '+' : '') + fmtBRL(lucro)} color={lc} />;
+        })()}
         <Stat label="Compras"  value={String(purchases)} />
         {totalBudget > 0 && <Stat label="Orçamento/dia" value={fmtBRL(totalBudget)} />}
       </div>
@@ -624,14 +644,19 @@ function WindowCard({ data, onSelectCampaign }) {
             {expanded ? '▾' : '▸'} Campanhas ({campaigns.length})
           </button>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            {visible.map(c => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
-                <span style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>{fmtBRL(c.spend)}</span>
-                {c.roas > 0 && <span style={{ color: c.roas >= 3 ? '#10b981' : c.roas >= 1.5 ? '#f59e0b' : '#ef4444', fontWeight: 700, flexShrink: 0 }}>{c.roas.toFixed(1)}x</span>}
-                {c.budgetInfo && <BudgetBadge type={c.budgetInfo.budget_type} />}
-              </div>
-            ))}
+            {visible.map(c => {
+              const lucro = c.revenue - c.spend;
+              const lc = lucro >= 0 ? '#10b981' : '#ef4444';
+              return (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                  <span style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                  <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>{fmtBRL(c.spend)}</span>
+                  {c.revenue > 0 && <span style={{ color: lc, fontWeight: 700, flexShrink: 0 }}>{lucro >= 0 ? '+' : ''}{fmtBRL(lucro)}</span>}
+                  {c.roas > 0 && <span style={{ color: c.roas >= 3 ? '#10b981' : c.roas >= 1.5 ? '#f59e0b' : '#ef4444', fontWeight: 700, flexShrink: 0 }}>{c.roas.toFixed(1)}x</span>}
+                  {c.budgetInfo && <BudgetBadge type={c.budgetInfo.budget_type} />}
+                </div>
+              );
+            })}
             {!expanded && campaigns.length > 3 && (
               <button onClick={() => setExpanded(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--accent)', fontWeight: 700, padding: 0, textAlign: 'left' }}>
                 + {campaigns.length - 3} mais
@@ -644,11 +669,11 @@ function WindowCard({ data, onSelectCampaign }) {
   );
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, color }) {
   return (
     <div>
       <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 1 }}>{label}</div>
-      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>{value}</div>
+      <div style={{ fontSize: 13, fontWeight: 800, color: color || 'var(--text-primary)' }}>{value}</div>
     </div>
   );
 }
