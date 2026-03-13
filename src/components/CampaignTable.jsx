@@ -4,7 +4,8 @@ import { fmtBRL, fmtInt, fmtPct, scoreColor, calcScore } from '../utils.js';
 
 export default function CampaignTable({ onSelectCampaign, openExplorer }) {
   const { t, filteredCampaigns, pinnedIds, togglePin, showPinnedOnly, setShowPinnedOnly,
-    searchQuery, setSearchQuery, objectiveFilter, setObjectiveFilter, objectives, days } = useApp();
+    searchQuery, setSearchQuery, objectiveFilter, setObjectiveFilter, objectives, days,
+    campaignBudgets } = useApp();
 
   const [sortKey, setSortKey] = useState('spend');
   const [sortDir, setSortDir] = useState('desc');
@@ -74,8 +75,9 @@ export default function CampaignTable({ onSelectCampaign, openExplorer }) {
     { key: '_pin',       label: '',                    w: 36,  sortable: false },
     { key: 'name',       label: t.table.campaign,      w: 220 },
     { key: 'account',    label: t.table.account,       w: 120 },
-    { key: 'objective',  label: t.table.objective,     w: 100 },
-    { key: 'spend',      label: t.table.spend,         w: 100 },
+    { key: 'objective',    label: t.table.objective,   w: 100 },
+    { key: 'budget_type',  label: 'Orçamento',         w: 100, sortable: false },
+    { key: 'spend',        label: t.table.spend,       w: 100 },
     { key: 'impressions',label: t.table.impressions,   w: 110 },
     { key: 'clicks',     label: t.table.clicks,        w: 80  },
     { key: 'ctr',        label: t.table.ctr,           w: 70  },
@@ -115,6 +117,22 @@ export default function CampaignTable({ onSelectCampaign, openExplorer }) {
         return <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{c.account}</span>;
       case 'objective':
         return <ObjBadge obj={c.objective} t={t} />;
+      case 'budget_type': {
+        const bi = campaignBudgets[c.id];
+        if (!bi) return <span style={{ color: 'var(--text-disabled)' }}>—</span>;
+        const isCBO = bi.budget_type === 'CBO';
+        const amt = isCBO
+          ? bi.daily_budget || 0
+          : (bi.adsets || []).reduce((s, a) => s + (a.daily_budget || 0), 0);
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: isCBO ? '#6366f1' : '#0ea5e9', background: isCBO ? 'rgba(99,102,241,0.1)' : 'rgba(14,165,233,0.1)', border: `1px solid ${isCBO ? '#c7d2fe' : '#bae6fd'}`, borderRadius: 999, padding: '1px 7px', display: 'inline-block', width: 'fit-content' }}>
+              {isCBO ? 'CBO' : 'Conjunto'}
+            </span>
+            {amt > 0 && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{fmtBRL(amt)}/dia</span>}
+          </div>
+        );
+      }
       case 'spend':
         return <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{fmtBRL(c.spend)}</span>;
       case 'impressions':

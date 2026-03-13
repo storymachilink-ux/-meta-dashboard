@@ -11,6 +11,7 @@ import { handleDaily }           from './src/api/daily.js'
 import { handleHourly }          from './src/api/hourly.js'
 import { handleGetAlerts, handlePatchAlert } from './src/api/alerts.js'
 import { handleRecommendations } from './src/api/recommendations.js'
+import { handleAdsetsBudgets }   from './src/api/adsetsBudgets.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -327,6 +328,11 @@ app.patch('/api/alerts/:id', (req, res) => {
 app.get('/api/recommendations', (req, res) => {
   if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
   handleRecommendations(req, res, supabase, TENANT_ID)
+})
+
+app.get('/api/adsets/budgets', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handleAdsetsBudgets(req, res, supabase, TENANT_ID)
 })
 
 // ============================================================

@@ -360,7 +360,7 @@ function CreativeModal({ item, onClose }) {
 // ─── Single Campaign View ─────────────────────────────────────────────────────
 
 function CampaignView({ campaign, apiCreativesCache, onCreativesFetched }) {
-  const { filteredDaily, t, cutoffDate, endDate, effectiveDays } = useApp();
+  const { filteredDaily, t, cutoffDate, endDate, effectiveDays, campaignBudgets } = useApp();
   const [creativeModal, setCreativeModal] = useState(null);
 
   const tier = getPerfTier(campaign);
@@ -456,6 +456,18 @@ function CampaignView({ campaign, apiCreativesCache, onCreativesFetched }) {
               {(campaign.date_start || campaign.date_stop) && (
                 <Tag>📅 {fmtDate(campaign.date_start)} → {fmtDate(campaign.date_stop)}</Tag>
               )}
+              {campaignBudgets[campaign.id] && (() => {
+                const bi = campaignBudgets[campaign.id];
+                const isCBO = bi.budget_type === 'CBO';
+                const amt = isCBO
+                  ? bi.daily_budget || 0
+                  : (bi.adsets || []).reduce((s, a) => s + (a.daily_budget || 0), 0);
+                return (
+                  <span style={{ fontSize: 11, fontWeight: 800, color: isCBO ? '#6366f1' : '#0ea5e9', background: isCBO ? 'rgba(99,102,241,0.1)' : 'rgba(14,165,233,0.1)', border: `1px solid ${isCBO ? '#c7d2fe' : '#bae6fd'}`, borderRadius: 999, padding: '2px 10px' }}>
+                    {isCBO ? '💼 CBO' : '📦 Conjunto'}{amt > 0 ? ` · R$${amt.toFixed(0)}/dia` : ''}
+                  </span>
+                );
+              })()}
             </div>
 
             {/* Perf badge + data window */}

@@ -24,6 +24,13 @@ import ProfilePage from './components/ProfilePage.jsx';
 
 const DAY_PRESETS = [3, 5, 7, 12, 15, 20, 30, 60, 90];
 
+export const DEFAULT_WINDOWS = [
+  { id: 'manha',     label: 'Manhã',     icon: '🌅', start: '07', end: '09' },
+  { id: 'tarde',     label: 'Tarde',     icon: '☀️',  start: '12', end: '15' },
+  { id: 'noite',     label: 'Noite',     icon: '🌙', start: '19', end: '22' },
+  { id: 'madrugada', label: 'Madrugada', icon: '🌃', start: '00', end: '03' },
+];
+
 export default function App() {
   const [lang, setLang] = useState('pt');
   const [tab, setTab] = useState('overview');
@@ -40,6 +47,17 @@ export default function App() {
     } catch {}
     return null;
   });
+  const [timeWindows, setTimeWindows] = useState(() => {
+    try {
+      const profs = JSON.parse(localStorage.getItem('meta_profiles') || '[]');
+      const id    = localStorage.getItem('meta_active_profile');
+      const active = profs.find(p => p.id === id) || profs[0];
+      return active?.timeWindows || DEFAULT_WINDOWS;
+    } catch { return DEFAULT_WINDOWS; }
+  });
+
+  const [campaignBudgets, setCampaignBudgets] = useState({});
+
   const [objectiveFilter, setObjectiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampaign, setSelectedCampaignRaw] = useState(null);
@@ -74,6 +92,17 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     try { localStorage.setItem('theme', darkMode ? 'dark' : 'light'); } catch {}
   }, [darkMode]);
+
+  useEffect(() => {
+    fetch('/api/adsets/budgets')
+      .then(r => r.ok ? r.json() : { campaigns: [] })
+      .then(d => {
+        const map = {};
+        (d.campaigns || []).forEach(c => { map[c.campaign_id] = c; });
+        setCampaignBudgets(map);
+      })
+      .catch(() => {});
+  }, []);
 
   const TODAY = new Date().toISOString().slice(0, 10);
   const t = translations[lang];
@@ -262,6 +291,8 @@ export default function App() {
     allCampaigns: enrichedCampaigns,
     rawCampaigns: allCampaigns,
     activeAccounts, setActiveAccounts,
+    timeWindows, setTimeWindows,
+    campaignBudgets,
     cutoffDate, endDate, sidebarCollapsed,
     chatHistory, setChatHistory, handleAsk,
     periodMetrics,

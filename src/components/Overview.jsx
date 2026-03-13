@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { fmtBRL, fmtInt, fmtPct, fmt, scoreColor } from '../utils.js';
 import { AreaChart, Area, BarChart, Bar, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
@@ -6,22 +6,26 @@ import PeriodPills from './PeriodPills.jsx';
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-function loadTimeWindows() {
-  try {
-    const v = localStorage.getItem('meta_time_windows');
-    if (v) return JSON.parse(v);
-  } catch {}
-  return [
-    { id: 'manha',     label: 'Manhã',     icon: '🌅', start: '07', end: '09' },
-    { id: 'tarde',     label: 'Tarde',     icon: '☀️', start: '12', end: '15' },
-    { id: 'noite',     label: 'Noite',     icon: '🌙', start: '19', end: '22' },
-    { id: 'madrugada', label: 'Madrugada', icon: '🌃', start: '00', end: '03' },
-  ];
+// ── Utility: build array of hours within a time window (handles overnight) ──
+function buildHourRange(start, end) {
+  const s = parseInt(start, 10), e = parseInt(end, 10);
+  if (e >= s) return Array.from({ length: e - s + 1 }, (_, i) => s + i);
+  return [...Array.from({ length: 24 - s }, (_, i) => s + i), ...Array.from({ length: e + 1 }, (_, i) => i)];
+}
+
+function last7Dates() {
+  const dates = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
 }
 
 export default function Overview({ onSelectCampaign }) {
   const { t, summary, filteredCampaigns, filteredDaily, days, periodMetrics,
-    scaleRecs, pauseRecs, testRecs, recsLoading } = useApp();
+    scaleRecs, pauseRecs, testRecs, recsLoading,
+    timeWindows, campaignBudgets } = useApp();
 
   const { totalSpend, totalImpressions, totalClicks, avgCTR, avgCPC, avgCPM,
     totalPurchases, totalRevenue, avgROAS, totalReach, totalEngagement } = summary;
@@ -141,6 +145,56 @@ export default function Overview({ onSelectCampaign }) {
     });
     return alerts.sort((a, b) => b.spend - a.spend).slice(0, 8);
   }, [filteredCampaigns, filteredDaily, days]);
+
+  // ── Hourly window analysis ─────────────────────────────────────────────
+  const [hourlyByDate, setHourlyByDate] = useState({});
+  const [hwLoading, setHwLoading]       = useState(true);
+  const [hwHasData, setHwHasData]       = useState(false);
+  const [syncingHourly, setSyncingHourly] = useState(false);
+
+  useEffect(() => {
+    const dates = last7Dates();
+    Promise.all(dates.map(d =>
+      fetch(`/api/hourly?date=${d}&level=campaign`)
+        .then(r => r.ok ? r.json() : {})
+        .catch(() => ({}))
+    )).then(results => {
+      const byDate = {};
+      results.forEach((r, i) => { if (r.raw?.length) byDate[dates[i]] = r; });
+      setHourlyByDate(byDate);
+      setHwHasData(Object.keys(byDate).length > 0);
+      setHwLoading(false);
+    });
+  }, []);
+
+  const windowData = useMemo(() => {
+    if (!hwHasData || !timeWindows?.length) return [];
+    return timeWindows.map(w => {
+      const hours = buildHourRange(w.start, w.end);
+      let spend = 0, revenue = 0, purchases = 0;
+      const campMap = {};
+      Object.values(hourlyByDate).forEach(day => {
+        (day.raw || []).forEach(row => {
+          if (!hours.includes(row.hour)) return;
+          spend     += row.spend         || 0;
+          revenue   += row.purchase_value|| 0;
+          purchases += row.purchases     || 0;
+          if (!campMap[row.entity_id])
+            campMap[row.entity_id] = { name: row.entity_name, spend: 0, revenue: 0, purchases: 0 };
+          campMap[row.entity_id].spend     += row.spend          || 0;
+          campMap[row.entity_id].revenue   += row.purchase_value || 0;
+          campMap[row.entity_id].purchases += row.purchases      || 0;
+        });
+      });
+      const roas = spend > 0 ? revenue / spend : 0;
+      const campaigns = Object.entries(campMap).map(([id, m]) => ({
+        id, ...m,
+        roas: m.spend > 0 ? m.revenue / m.spend : 0,
+        budgetInfo: campaignBudgets[id] || null,
+      })).sort((a, b) => b.spend - a.spend);
+      return { window: w, spend, revenue, purchases, roas, campaigns, daysWithData: Object.keys(hourlyByDate).length };
+    });
+  }, [hwHasData, hourlyByDate, timeWindows, campaignBudgets]);
 
   const accountBreakdown = useMemo(() => {
     const map = {};
@@ -325,6 +379,51 @@ export default function Overview({ onSelectCampaign }) {
           </div>
         </div>
       ) : null}
+
+      {/* ── Time Window Analysis ─────────────────────────────────────────── */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>⏰ Análise por Janela de Horário</div>
+          {hwHasData && (
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px', fontWeight: 600 }}>
+              {Object.keys(hourlyByDate).length} dias disponíveis
+            </span>
+          )}
+        </div>
+
+        {hwLoading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+            {[1,2,3,4].map(i => (
+              <div key={i} style={{ ...card, height: 130, background: 'var(--bg-subtle)', animation: 'pulse 1.5s infinite' }} />
+            ))}
+          </div>
+        ) : !hwHasData ? (
+          <div style={{ ...card, textAlign: 'center', padding: '28px 20px' }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>📊</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Dados horários não disponíveis</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+              Sincronize os dados horários para ver métricas por faixa de horário — Manhã, Tarde, Noite e Madrugada.
+            </div>
+            <button
+              disabled={syncingHourly}
+              onClick={async () => {
+                setSyncingHourly(true);
+                try { await fetch('/api/sync/hourly', { method: 'POST' }); } catch {}
+                setTimeout(() => { setSyncingHourly(false); window.location.reload(); }, 4000);
+              }}
+              style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: syncingHourly ? 'wait' : 'pointer', opacity: syncingHourly ? 0.7 : 1 }}
+            >
+              {syncingHourly ? '🔄 Sincronizando...' : '🔄 Sincronizar Dados Horários'}
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+            {windowData.map(data => (
+              <WindowCard key={data.window.id} data={data} onSelectCampaign={onSelectCampaign} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -456,6 +555,100 @@ function DecisionCol({ icon, label, color, bg, border, recs, campaigns, onSelect
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Budget badge ──────────────────────────────────────────────────────────────
+function BudgetBadge({ type }) {
+  const isCBO = type === 'CBO';
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 800,
+      color: isCBO ? '#6366f1' : '#0ea5e9',
+      background: isCBO ? 'rgba(99,102,241,0.1)' : 'rgba(14,165,233,0.1)',
+      border: `1px solid ${isCBO ? '#c7d2fe' : '#bae6fd'}`,
+      borderRadius: 999, padding: '1px 7px', whiteSpace: 'nowrap',
+    }}>
+      {isCBO ? 'CBO' : 'Conjunto'}
+    </span>
+  );
+}
+
+// ── Window card ───────────────────────────────────────────────────────────────
+function WindowCard({ data, onSelectCampaign }) {
+  const [expanded, setExpanded] = useState(false);
+  const { window: w, spend, revenue, purchases, roas, campaigns, daysWithData } = data;
+  const borderColor = roas >= 3 ? '#10b981' : roas >= 1.5 ? '#f59e0b' : roas > 0 ? '#ef4444' : 'var(--border)';
+  const roasColor   = roas >= 3 ? '#10b981' : roas >= 1.5 ? '#f59e0b' : roas > 0 ? '#ef4444' : 'var(--text-muted)';
+  const totalBudget = campaigns.reduce((s, c) => {
+    if (!c.budgetInfo) return s;
+    if (c.budgetInfo.budget_type === 'CBO') return s + (c.budgetInfo.daily_budget || 0);
+    return s + (c.budgetInfo.adsets || []).reduce((x, a) => x + (a.daily_budget || 0), 0);
+  }, 0);
+
+  const visible = expanded ? campaigns : campaigns.slice(0, 3);
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)', borderRadius: 'var(--r-lg)',
+      border: `1.5px solid ${borderColor}`, boxShadow: 'var(--shadow-sm)',
+      padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ fontSize: 20 }}>{w.icon}</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>{w.label}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{w.start}:00 – {w.end}:00 · {daysWithData}d</div>
+          </div>
+        </div>
+        {spend > 0 && (
+          <span style={{ fontSize: 13, fontWeight: 900, color: roasColor }}>{roas.toFixed(2)}x</span>
+        )}
+      </div>
+
+      {/* Primary metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 10px' }}>
+        <Stat label="Gasto"    value={fmtBRL(spend)} />
+        <Stat label="Receita"  value={fmtBRL(revenue)} />
+        <Stat label="Compras"  value={String(purchases)} />
+        {totalBudget > 0 && <Stat label="Orçamento/dia" value={fmtBRL(totalBudget)} />}
+      </div>
+
+      {/* Campaign breakdown */}
+      {campaigns.length > 0 && (
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 2 }}>
+          <button onClick={() => setExpanded(p => !p)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', padding: '0 0 6px', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {expanded ? '▾' : '▸'} Campanhas ({campaigns.length})
+          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {visible.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11 }}>
+                <span style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>{fmtBRL(c.spend)}</span>
+                {c.roas > 0 && <span style={{ color: c.roas >= 3 ? '#10b981' : c.roas >= 1.5 ? '#f59e0b' : '#ef4444', fontWeight: 700, flexShrink: 0 }}>{c.roas.toFixed(1)}x</span>}
+                {c.budgetInfo && <BudgetBadge type={c.budgetInfo.budget_type} />}
+              </div>
+            ))}
+            {!expanded && campaigns.length > 3 && (
+              <button onClick={() => setExpanded(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--accent)', fontWeight: 700, padding: 0, textAlign: 'left' }}>
+                + {campaigns.length - 3} mais
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 1 }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>{value}</div>
     </div>
   );
 }

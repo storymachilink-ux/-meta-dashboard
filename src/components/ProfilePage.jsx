@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../AppContext.jsx';
+import { DEFAULT_WINDOWS } from '../App.jsx';
 
 // ── Storage helpers ────────────────────────────────────────────────────────
 const PROFILES_KEY    = 'meta_profiles';
@@ -17,13 +18,6 @@ function uuid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-const DEFAULT_WINDOWS = [
-  { id: 'manha',     label: 'Manhã',     icon: '🌅', start: '07', end: '09' },
-  { id: 'tarde',     label: 'Tarde',     icon: '☀️', start: '12', end: '15' },
-  { id: 'noite',     label: 'Noite',     icon: '🌙', start: '19', end: '22' },
-  { id: 'madrugada', label: 'Madrugada', icon: '🌃', start: '00', end: '03' },
-];
-
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 
 function newProfile(name = 'Novo Perfil') {
@@ -32,7 +26,7 @@ function newProfile(name = 'Novo Perfil') {
 
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function ProfilePage() {
-  const { rawCampaigns, setActiveAccounts } = useApp();
+  const { rawCampaigns, setActiveAccounts, setTimeWindows } = useApp();
 
   // All unique accounts from raw campaigns
   const allAccounts = useMemo(() => {
@@ -72,7 +66,7 @@ export default function ProfilePage() {
   // Persist profiles
   useEffect(() => { saveJSON(PROFILES_KEY, profiles); }, [profiles]);
 
-  // When active profile changes, propagate accounts to app
+  // When active profile changes, propagate accounts + timeWindows to app
   useEffect(() => {
     saveJSON(ACTIVE_PROF_KEY, activeId);
     if (!activeProfile) return;
@@ -81,6 +75,7 @@ export default function ProfilePage() {
     } else {
       setActiveAccounts(new Set(activeProfile.activeAccounts));
     }
+    setTimeWindows(activeProfile.timeWindows || DEFAULT_WINDOWS);
   }, [activeId, profiles]);
 
   // ── Profile mutations ──────────────────────────────────────────────────
