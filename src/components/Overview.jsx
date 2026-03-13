@@ -149,6 +149,17 @@ export default function Overview({ onSelectCampaign }) {
     return alerts.sort((a, b) => b.spend - a.spend).slice(0, 8);
   }, [filteredCampaigns, filteredDaily, days]);
 
+  // ── Checkout sales ────────────────────────────────────────────────────
+  const [checkoutSales, setCheckoutSales]   = useState(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/checkout/sales?days=30')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setCheckoutSales(d); setCheckoutLoading(false); })
+      .catch(() => setCheckoutLoading(false));
+  }, []);
+
   // ── Hourly window analysis ─────────────────────────────────────────────
   const [hourlyByDate, setHourlyByDate] = useState({});
   const [hwLoading, setHwLoading]       = useState(true);
@@ -447,6 +458,29 @@ export default function Overview({ onSelectCampaign }) {
               <WindowCard key={data.window.id} data={data} onSelectCampaign={onSelectCampaign} />
             ))}
           </div>
+        )}
+      </div>
+
+      {/* ── Checkout Sales ───────────────────────────────────────────────── */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>🛒 Vendas do Checkout</div>
+          {checkoutSales?.totalOrders > 0 && (
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px', fontWeight: 600 }}>
+              {checkoutSales.days} dias
+            </span>
+          )}
+        </div>
+
+        {checkoutLoading ? (
+          <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, padding: '20px' }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Carregando dados de checkout...</span>
+          </div>
+        ) : !checkoutSales || checkoutSales.totalOrders === 0 ? (
+          <CheckoutSetupCard />
+        ) : (
+          <CheckoutDashboard data={checkoutSales} />
         )}
       </div>
     </div>
@@ -761,3 +795,155 @@ const card = {
   boxShadow: 'var(--shadow-sm)',
   transition: 'box-shadow var(--t-base)',
 };
+
+// ── Checkout: setup card (no data yet) ────────────────────────────────────────
+function CheckoutSetupCard() {
+  const webhookUrl = `${window.location.origin}/api/webhook/checkout`;
+  const [copied, setCopied] = useState(false);
+  function copy(text) {
+    navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+  return (
+    <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <div style={{ fontSize: 36, flexShrink: 0 }}>🔗</div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Configure o Webhook do Checkout</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            Cole a URL abaixo no seu checkout (Kiwify, Hotmart, Yampi, Braip, etc.) para começar a receber dados de vendas com UTMs automaticamente.
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 6 }}>URL do Webhook</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '9px 12px' }}>
+          <code style={{ flex: 1, fontSize: 11, color: 'var(--text-primary)', wordBreak: 'break-all', fontFamily: 'monospace' }}>{webhookUrl}</code>
+          <button onClick={() => copy(webhookUrl)} style={{ flexShrink: 0, background: copied ? '#10b981' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
+            {copied ? '✓ Copiado' : 'Copiar'}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+        {[
+          { platform: 'Kiwify',   icon: '🥝', field: 'Webhook de Venda' },
+          { platform: 'Hotmart',  icon: '🔥', field: 'Notificações' },
+          { platform: 'Yampi',    icon: '⚡', field: 'Webhooks' },
+          { platform: 'Braip',    icon: '💎', field: 'Pós-Venda' },
+          { platform: 'Ticto',    icon: '🎯', field: 'Integrações' },
+          { platform: 'CartPanda',icon: '🐼', field: 'Webhooks' },
+        ].map(p => (
+          <div key={p.platform} style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ fontSize: 16 }}>{p.icon}</span>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{p.platform}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.field}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 'var(--r-sm)', padding: '8px 12px', lineHeight: 1.6 }}>
+        💡 <strong>Dica:</strong> Se seu checkout suportar Secret/Assinatura, configure a variável <code>CHECKOUT_WEBHOOK_SECRET</code> no servidor para validar as requisições.
+      </div>
+    </div>
+  );
+}
+
+// ── Checkout: dashboard (has data) ────────────────────────────────────────────
+function CheckoutDashboard({ data }) {
+  const { totalRevenue, totalOrders, paidRevenue, organicRevenue, bySource, byCampaign, recentSales } = data;
+  const paidPct    = totalRevenue > 0 ? (paidRevenue    / totalRevenue) * 100 : 0;
+  const organicPct = totalRevenue > 0 ? (organicRevenue / totalRevenue) * 100 : 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+        {[
+          { label: 'Receita Total',  value: fmtBRL(totalRevenue),  color: '#10b981', icon: '💰' },
+          { label: 'Pedidos',        value: String(totalOrders),   color: '#6366f1', icon: '📦' },
+          { label: 'Pago (Meta)',    value: fmtBRL(paidRevenue),   color: '#0ea5e9', icon: '📣' },
+          { label: 'Orgânico',       value: fmtBRL(organicRevenue),color: '#f59e0b', icon: '🌿' },
+        ].map(k => (
+          <div key={k.label} style={{ ...card, padding: '14px 16px' }}>
+            <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span>{k.icon}</span>{k.label}
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: k.color }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Paid vs Organic bar */}
+      {totalRevenue > 0 && (
+        <div style={{ ...card, padding: '14px 16px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Pago vs Orgânico</div>
+          <div style={{ display: 'flex', height: 10, borderRadius: 999, overflow: 'hidden', gap: 2, marginBottom: 6 }}>
+            <div style={{ flex: paidPct,    background: '#0ea5e9', borderRadius: '999px 0 0 999px', minWidth: paidPct > 0 ? 4 : 0 }} />
+            <div style={{ flex: organicPct, background: '#f59e0b', borderRadius: '0 999px 999px 0', minWidth: organicPct > 0 ? 4 : 0 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 14, fontSize: 11 }}>
+            <span style={{ color: '#0ea5e9', fontWeight: 700 }}>📣 Pago {paidPct.toFixed(0)}%</span>
+            <span style={{ color: '#f59e0b', fontWeight: 700 }}>🌿 Orgânico {organicPct.toFixed(0)}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* By source + by campaign side by side */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {/* By UTM Source */}
+        <div style={{ ...card, padding: '14px 16px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>Por Fonte (UTM Source)</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {bySource.slice(0, 6).map(s => (
+              <div key={s.source} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ flex: 1, fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.source}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.orders}x</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#10b981', minWidth: 70, textAlign: 'right' }}>{fmtBRL(s.revenue)}</span>
+              </div>
+            ))}
+            {bySource.length === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sem dados</div>}
+          </div>
+        </div>
+
+        {/* Top campaigns by checkout revenue */}
+        <div style={{ ...card, padding: '14px 16px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>Top Campanhas (UTM Campaign)</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {byCampaign.slice(0, 6).map(c => (
+              <div key={c.campaign} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ flex: 1, fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.campaign}</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-subtle)', borderRadius: 999, padding: '1px 6px' }}>{c.source}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#10b981', minWidth: 70, textAlign: 'right' }}>{fmtBRL(c.revenue)}</span>
+              </div>
+            ))}
+            {byCampaign.length === 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Sem dados</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent sales */}
+      {recentSales?.length > 0 && (
+        <div style={{ ...card, padding: '14px 16px' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>Vendas Recentes</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {recentSales.map((s, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < recentSales.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.product_name || s.order_id || '—'}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    {s.source} {s.campaign !== '—' ? `· ${s.campaign}` : ''}
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#10b981', flexShrink: 0 }}>{fmtBRL(s.revenue)}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>{s.event_at ? new Date(s.event_at).toLocaleDateString('pt-BR') : ''}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

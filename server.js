@@ -12,13 +12,16 @@ import { handleHourly }          from './src/api/hourly.js'
 import { handleGetAlerts, handlePatchAlert } from './src/api/alerts.js'
 import { handleRecommendations } from './src/api/recommendations.js'
 import { handleAdsetsBudgets }   from './src/api/adsetsBudgets.js'
+import { handleCheckoutWebhook } from './src/api/checkoutWebhook.js'
+import { handleCheckoutSales }   from './src/api/checkoutSales.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // ============================================================
 // Config
 // ============================================================
-let TOKEN       = process.env.META_TOKEN
+let TOKEN          = process.env.META_TOKEN
+const WEBHOOK_SECRET = process.env.CHECKOUT_WEBHOOK_SECRET || null
 const BASE      = 'https://graph.facebook.com/v21.0'
 const PORT      = process.env.PORT || 3000
 const TENANT_ID = process.env.DEFAULT_TENANT_ID || '00000000-0000-0000-0000-000000000001'
@@ -333,6 +336,23 @@ app.get('/api/recommendations', (req, res) => {
 app.get('/api/adsets/budgets', (req, res) => {
   if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
   handleAdsetsBudgets(req, res, supabase, TENANT_ID)
+})
+
+// ============================================================
+// Checkout Webhook — recebe eventos de venda + UTM
+// ============================================================
+app.post('/api/webhook/checkout', (req, res) => {
+  if (!supabase) {
+    // Aceitar sem banco (não quebrar o checkout do cliente)
+    console.warn('[webhook] Supabase não configurado — evento descartado')
+    return res.status(200).json({ ok: true, warning: 'no database' })
+  }
+  handleCheckoutWebhook(req, res, supabase, TENANT_ID, WEBHOOK_SECRET)
+})
+
+app.get('/api/checkout/sales', (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase não configurado' })
+  handleCheckoutSales(req, res, supabase, TENANT_ID)
 })
 
 // ============================================================
