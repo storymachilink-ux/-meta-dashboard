@@ -115,6 +115,71 @@ function ScoreCircle({ score }) {
   );
 }
 
+// ─── Metric rating helpers ────────────────────────────────────────────────────
+
+const METRIC_RATINGS = {
+  roas:  { good: [3, 'Excelente'], mid: [2, 'Bom'], low: [1.5, 'Regular'], bad: 'Fraco',   invert: false },
+  ctr:   { good: [2, 'Excelente'], mid: [1, 'Bom'], low: [0.5, 'Fraco'],   bad: 'Crítico', invert: false },
+  cpc:   { good: [1.5,'Excelente'],mid: [3, 'Regular'],low: [5,'Caro'],    bad: 'Muito caro',invert: true },
+  cpm:   { good: [20, 'Baixo'],   mid: [40, 'Médio'],  low: [70,'Alto'],   bad: 'Muito alto',invert: true },
+  freq:  { good: [1.5,'Saudável'],mid: [2.5,'Atenção'],low:[3.5,'Alto'],   bad: 'Saturado', invert: true },
+};
+
+const METRIC_INFO = {
+  roas:  { desc: 'Receita ÷ Gasto. Quanto você recebe para cada R$1 investido.', good: '≥ 3x Excelente · ≥ 2x Bom', warn: '< 1.5x = campanha no prejuízo' },
+  ctr:   { desc: 'Cliques ÷ Impressões. Mede o poder de atração do criativo.',   good: '≥ 2% Excelente · ≥ 1% Bom', warn: '< 0.5% = criativo cansado — renovar' },
+  cpc:   { desc: 'Gasto ÷ Cliques. Custo para trazer uma visita ao site.',        good: '< R$1,50 Excelente',         warn: '> R$3,00 = tráfego caro' },
+  cpm:   { desc: 'Custo para exibir o anúncio 1.000 vezes. Reflete concorrência.',good: '< R$20 Baixo',               warn: '> R$40 = leilão competitivo' },
+  freq:  { desc: 'Vezes que a mesma pessoa viu o anúncio. Alta frequência = fadiga.',good:'< 2x Saudável',             warn: '> 3x = renovar criativos urgente' },
+};
+
+function getRating(key, value) {
+  const r = METRIC_RATINGS[key];
+  if (!r || value == null || value === 0) return null;
+  const [gt, gl] = r.good, [mt, ml] = r.mid, [lt, ll] = r.low;
+  if (!r.invert) {
+    if (value >= gt) return { label: gl, color: '#10b981', bg: 'rgba(16,185,129,0.1)' };
+    if (value >= mt) return { label: ml, color: '#22d3ee', bg: 'rgba(34,211,238,0.1)' };
+    if (value >= lt) return { label: ll, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' };
+    return { label: r.bad, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' };
+  } else {
+    if (value <= gt) return { label: gl, color: '#10b981', bg: 'rgba(16,185,129,0.1)' };
+    if (value <= mt) return { label: ml, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' };
+    if (value <= lt) return { label: ll, color: '#f97316', bg: 'rgba(249,115,22,0.1)' };
+    return { label: r.bad, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' };
+  }
+}
+
+function MetricInfoTooltip({ metricKey }) {
+  const [show, setShow] = useState(false);
+  const info = METRIC_INFO[metricKey];
+  if (!info) return null;
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <button onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
+        onClick={e => e.stopPropagation()}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)', padding: '0 1px', lineHeight: 1 }}>ⓘ</button>
+      {show && (
+        <div style={{ position: 'absolute', bottom: '110%', left: '50%', transform: 'translateX(-50%)', zIndex: 200, width: 210, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', boxShadow: '0 8px 24px rgba(0,0,0,0.22)', pointerEvents: 'none' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 6 }}>{info.desc}</div>
+          <div style={{ fontSize: 10, background: '#10b98112', border: '1px solid #10b98133', borderRadius: 6, padding: '3px 8px', color: '#10b981', fontWeight: 700, marginBottom: 4 }}>✅ {info.good}</div>
+          <div style={{ fontSize: 10, background: '#ef444412', border: '1px solid #ef444433', borderRadius: 6, padding: '3px 8px', color: '#ef4444', fontWeight: 700 }}>⚠️ {info.warn}</div>
+        </div>
+      )}
+    </span>
+  );
+}
+
+function RatingPill({ metricKey, value }) {
+  const r = getRating(metricKey, value);
+  if (!r) return null;
+  return (
+    <span style={{ fontSize: 9, fontWeight: 800, color: r.color, background: r.bg, border: `1px solid ${r.color}40`, borderRadius: 999, padding: '1px 6px', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
+      {r.label}
+    </span>
+  );
+}
+
 // ─── Creative Modal ───────────────────────────────────────────────────────────
 
 function CreativeModal({ item, onClose }) {
@@ -518,8 +583,11 @@ function CampaignView({ campaign, apiCreativesCache, onCreativesFetched }) {
             padding: '14px 16px',
             boxShadow: 'var(--shadow-sm)',
           }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4, letterSpacing: 0.5 }}>ROAS</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: roasColor, lineHeight: 1 }}>{fmt(roas, 2)}x</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4, letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 3 }}>
+              ROAS <MetricInfoTooltip metricKey="roas" />
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: roasColor, lineHeight: 1, marginBottom: 4 }}>{fmt(roas, 2)}x</div>
+            <RatingPill metricKey="roas" value={roas} />
           </div>
 
           {/* Receita */}
@@ -571,28 +639,27 @@ function CampaignView({ campaign, apiCreativesCache, onCreativesFetched }) {
           </div>
         </div>
 
-        {/* Secondary chips */}
+        {/* Secondary chips with ratings */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {[
-            ['CTR', fmtPct(campaign.ctr)],
-            ['CPC', fmtBRL(campaign.cpc)],
-            ['CPM', fmtBRL(campaign.cpm)],
-            ['Freq', fmt(campaign.frequency, 2) + 'x'],
-            ['Alcance', fmtInt(campaign.reach)],
-            ['Engaj.', fmtInt(campaign.page_engagement)],
-          ].map(([label, val]) => (
+            { label: 'CTR',     val: campaign.ctr,            fmt: v => v > 0 ? fmtPct(v) : '—',             infoKey: 'ctr',  ratingKey: 'ctr',  ratingVal: campaign.ctr },
+            { label: 'CPC',     val: campaign.cpc,            fmt: v => v > 0 ? fmtBRL(v) : '—',             infoKey: 'cpc',  ratingKey: 'cpc',  ratingVal: campaign.cpc },
+            { label: 'CPM',     val: campaign.cpm,            fmt: v => v > 0 ? fmtBRL(v) : '—',             infoKey: 'cpm',  ratingKey: 'cpm',  ratingVal: campaign.cpm },
+            { label: 'Freq',    val: campaign.frequency,      fmt: v => v > 0 ? fmt(v, 2) + 'x' : '—',       infoKey: 'freq', ratingKey: 'freq', ratingVal: campaign.frequency },
+            { label: 'Alcance', val: campaign.reach,          fmt: v => fmtInt(v) },
+            { label: 'Engaj.',  val: campaign.page_engagement,fmt: v => fmtInt(v) },
+          ].map(({ label, val, fmt: fmtFn, infoKey, ratingKey, ratingVal }) => (
             <div key={label} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--r-sm)',
-              padding: '5px 12px',
-              fontSize: 12,
+              display: 'flex', flexDirection: 'column', gap: 3,
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 'var(--r-sm)', padding: '6px 12px', fontSize: 12,
             }}>
-              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{label}:</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{val ?? '—'}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 11 }}>{label}:</span>
+                {infoKey && <MetricInfoTooltip metricKey={infoKey} />}
+                <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{fmtFn(val) ?? '—'}</span>
+              </div>
+              {ratingKey && <RatingPill metricKey={ratingKey} value={ratingVal} />}
             </div>
           ))}
         </div>

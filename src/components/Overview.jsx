@@ -265,10 +265,10 @@ export default function Overview({ onSelectCampaign }) {
 
       {/* 4 ranking cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 16 }}>
-        <RankCard title={`💸 ${t.topSpend}`}  items={topSpend}  field="spend"     fmt={fmtBRL}                         onSelect={onSelectCampaign} />
-        <RankCard title={`🎯 ${t.bestCTR}`}   items={bestCTR}   field="ctr"       fmt={(v) => v.toFixed(2) + '%'}      onSelect={onSelectCampaign} positive />
-        <RankCard title={`⚠️ ${t.worstCTR}`}  items={worstCTR}  field="ctr"       fmt={(v) => v.toFixed(2) + '%'}      onSelect={onSelectCampaign} negative />
-        <RankCard title={`🔁 ${t.highFreq}`}  items={highFreq}  field="frequency" fmt={(v) => v.toFixed(2) + 'x'}      onSelect={onSelectCampaign} negative />
+        <RankCard title={`💸 ${t.topSpend}`}  items={topSpend}  field="spend"     fmt={fmtBRL}                         onSelect={onSelectCampaign}          infoKey="spend" />
+        <RankCard title={`🎯 ${t.bestCTR}`}   items={bestCTR}   field="ctr"       fmt={(v) => v.toFixed(2) + '%'}      onSelect={onSelectCampaign} positive  infoKey="ctr" />
+        <RankCard title={`⚠️ ${t.worstCTR}`}  items={worstCTR}  field="ctr"       fmt={(v) => v.toFixed(2) + '%'}      onSelect={onSelectCampaign} negative  infoKey="ctrWorst" />
+        <RankCard title={`🔁 ${t.highFreq}`}  items={highFreq}  field="frequency" fmt={(v) => v.toFixed(2) + 'x'}      onSelect={onSelectCampaign} negative  infoKey="frequency" />
       </div>
 
       {/* Melhores Dias */}
@@ -277,58 +277,76 @@ export default function Overview({ onSelectCampaign }) {
           {/* Por dia da semana */}
           <div style={card}>
             <SectionTitle>📅 Performance por Dia da Semana</SectionTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[...bestDaysByWeekday].sort((a, b) => b.roas - a.roas).map((d, i) => {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[...bestDaysByWeekday].sort((a, b) => b.roas - a.roas).map((d) => {
                 const maxRoas = Math.max(...bestDaysByWeekday.map(x => x.roas), 0.01);
                 const pct = Math.round((d.roas / maxRoas) * 100);
                 const col = d.roas >= 3 ? '#10b981' : d.roas >= 1.5 ? '#f59e0b' : d.days === 0 ? '#94a3b8' : '#ef4444';
+                const avgLucro = d.days > 0 ? (d.revenue - d.spend) / d.days : 0;
+                const avgSpend = d.days > 0 ? d.spend / d.days : 0;
                 return (
-                  <div key={d.wd} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', width: 26, flexShrink: 0 }}>{d.name}</span>
-                    <div style={{ flex: 1, background: 'var(--border-subtle)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: pct + '%', background: col, borderRadius: 99, transition: 'width 0.6s' }} />
+                  <div key={d.wd}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', width: 26, flexShrink: 0 }}>{d.name}</span>
+                      <div style={{ flex: 1, background: 'var(--border-subtle)', borderRadius: 99, height: 7, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: pct + '%', background: col, borderRadius: 99, transition: 'width 0.6s' }} />
+                      </div>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: col, width: 38, textAlign: 'right', flexShrink: 0 }}>
+                        {d.days === 0 ? '—' : d.roas.toFixed(1) + 'x'}
+                      </span>
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: col, width: 40, textAlign: 'right', flexShrink: 0 }}>
-                      {d.days === 0 ? '—' : d.roas.toFixed(1) + 'x'}
-                    </span>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', width: 50, textAlign: 'right', flexShrink: 0 }}>
-                      {d.purchases > 0 ? `${d.purchases} vnd` : ''}
-                    </span>
+                    {d.days > 0 && (
+                      <div style={{ display: 'flex', gap: 10, paddingLeft: 34, fontSize: 10, color: 'var(--text-muted)' }}>
+                        <span>Gasto: <b style={{ color: 'var(--text-secondary)' }}>{fmtBRL(avgSpend)}/dia</b></span>
+                        <span>Lucro: <b style={{ color: avgLucro >= 0 ? '#10b981' : '#ef4444' }}>{avgLucro >= 0 ? '+' : ''}{fmtBRL(avgLucro)}/dia</b></span>
+                        {d.purchases > 0 && <span>{d.purchases} vendas</span>}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Últimos 7 dias */}
+          {/* Criativos Campeões */}
           <div style={card}>
-            <SectionTitle>📊 Últimos 7 Dias</SectionTitle>
-            {last7DaysPerf.length > 0 ? (
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={last7DaysPerf} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    formatter={(v, name) => name === 'roas' ? [v.toFixed(2) + 'x', 'ROAS'] : [fmtBRL(v), 'Gasto']}
-                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11 }}
-                    labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
-                  />
-                  <Bar dataKey="roas" radius={[4, 4, 0, 0]}>
-                    {last7DaysPerf.map((d, i) => (
-                      <Cell key={i} fill={d.roas >= 3 ? '#10b981' : d.roas >= 1.5 ? '#f59e0b' : d.roas > 0 ? '#ef4444' : '#94a3b855'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <SectionTitle>🏆 Criativos Campeões</SectionTitle>
+            {filteredCampaigns.filter(c => c.spend > 5).length === 0 ? (
+              <EmptyState text="Dados insuficientes" />
             ) : (
-              <EmptyState text="Dados insuficientes para o período" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[...filteredCampaigns]
+                  .filter(c => c.spend > 5 && (c.revenue || 0) > 0)
+                  .sort((a, b) => b.roas - a.roas)
+                  .slice(0, 4)
+                  .map((c, i) => {
+                    const lucro = (c.revenue || 0) - c.spend;
+                    const rc = c.roas >= 3 ? '#10b981' : c.roas >= 1.5 ? '#f59e0b' : '#ef4444';
+                    const lc = lucro >= 0 ? '#10b981' : '#ef4444';
+                    return (
+                      <div key={c.id} onClick={() => onSelectCampaign(c)}
+                        className="hover-bg"
+                        style={{ padding: '10px 12px', borderRadius: 'var(--r-md)', border: `1px solid ${rc}33`, cursor: 'pointer', transition: 'all var(--t-fast)', background: rc + '06' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, color: rc, fontWeight: 900, width: 18 }}>{['🥇','🥈','🥉','4º'][i]}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px 8px', fontSize: 10 }}>
+                          <MiniStat label="ROAS"   value={c.roas.toFixed(2) + 'x'}          color={rc} />
+                          <MiniStat label="Gasto"  value={fmtBRL(c.spend)} />
+                          <MiniStat label="Lucro"  value={(lucro >= 0 ? '+' : '') + fmtBRL(lucro)} color={lc} />
+                          <MiniStat label="Vendas" value={String(c.purchases || 0)}           color={c.purchases > 0 ? '#10b981' : undefined} />
+                          <MiniStat label="CTR"    value={c.ctr > 0 ? c.ctr.toFixed(2) + '%' : '—'} color={c.ctr >= 2 ? '#10b981' : c.ctr >= 1 ? '#f59e0b' : c.ctr > 0 ? '#ef4444' : undefined} />
+                          <MiniStat label="CPC"    value={c.cpc > 0 ? fmtBRL(c.cpc) : '—'}  color={c.cpc > 0 && c.cpc < 1.5 ? '#10b981' : c.cpc < 3 ? '#f59e0b' : '#ef4444'} />
+                          <MiniStat label="CPM"    value={c.cpm > 0 ? fmtBRL(c.cpm) : '—'}  color={c.cpm > 0 && c.cpm < 20 ? '#10b981' : c.cpm < 40 ? '#f59e0b' : '#ef4444'} />
+                          <MiniStat label="Receita" value={fmtBRL(c.revenue || 0)} />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             )}
-            <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
-              {last7DaysPerf.slice(-7).sort((a, b) => b.roas - a.roas).slice(0, 3).map((d, i) => (
-                <span key={i} style={{ fontSize: '10px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 999, padding: '2px 9px', color: 'var(--text-muted)' }}>
-                  {['🥇','🥈','🥉'][i]} {d.date} · {d.roas.toFixed(1)}x
-                </span>
-              ))}
-            </div>
           </div>
         </div>
       )}
@@ -467,12 +485,15 @@ function MetricCard({ label, value, color, icon, sparkData }) {
   );
 }
 
-function RankCard({ title, items, field, fmt: fmtFn, onSelect, positive, negative }) {
+function RankCard({ title, items, field, fmt: fmtFn, onSelect, positive, negative, infoKey }) {
   const max = Math.max(...items.map(c => c[field] || 0), 0.01);
   const valueColor = negative ? 'var(--danger)' : positive ? 'var(--success)' : 'var(--accent)';
   return (
     <div style={card}>
-      <div className="section-header">{title}</div>
+      <div className="section-header" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ flex: 1 }}>{title}</span>
+        {infoKey && <InfoTooltip metricKey={infoKey} />}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {items.map((c, i) => (
           <div key={c.id} onClick={() => onSelect(c)} className="hover-bg"
@@ -492,6 +513,60 @@ function RankCard({ title, items, field, fmt: fmtFn, onSelect, positive, negativ
         {items.length === 0 && <EmptyState text="—" />}
       </div>
     </div>
+  );
+}
+
+function MiniStat({ label, value, color }) {
+  return (
+    <div>
+      <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 1 }}>{label}</div>
+      <div style={{ fontSize: 11, fontWeight: 800, color: color || 'var(--text-primary)' }}>{value}</div>
+    </div>
+  );
+}
+
+// ── Info tooltip ──────────────────────────────────────────────────────────────
+const METRIC_INFO = {
+  spend:     { title: 'Investimento', desc: 'Total gasto em anúncios no período. Compare sempre com ROAS e Lucro para avaliar eficiência.', good: null, mid: null },
+  ctr:       { title: 'CTR — Taxa de Cliques', desc: 'Cliques ÷ Impressões. Mede o poder de atração do criativo.', good: '≥ 2% Excelente', mid: '1–2% Bom · < 1% Fraco' },
+  ctrWorst:  { title: 'CTR Baixo', desc: 'Campanhas com menor engajamento. CTR baixo indica criativo cansado ou público errado.', good: null, mid: '< 1% = renovar criativo urgente' },
+  frequency: { title: 'Frequência', desc: 'Média de vezes que a mesma pessoa viu seu anúncio.', good: '< 2x Saudável', mid: '2–3x Atenção · > 3x Saturado — renovar criativo' },
+  roas:      { title: 'ROAS', desc: 'Receita ÷ Gasto. Retorno sobre investimento publicitário.', good: '≥ 3x Excelente · ≥ 2x Bom', mid: '1.5–2x Regular · < 1.5x Prejuízo' },
+  cpc:       { title: 'CPC — Custo por Clique', desc: 'Gasto ÷ Cliques. Quanto custa cada visita.', good: '< R$1,50 Excelente', mid: 'R$1,50–3 Regular · > R$3 Caro' },
+  cpm:       { title: 'CPM — Custo por 1.000 Impressões', desc: 'Custo para exibir o anúncio 1.000 vezes.', good: '< R$20 Baixo', mid: 'R$20–40 Médio · > R$40 Alto' },
+};
+
+function InfoTooltip({ metricKey }) {
+  const [show, setShow] = useState(false);
+  const info = METRIC_INFO[metricKey];
+  if (!info) return null;
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onClick={e => { e.stopPropagation(); setShow(p => !p); }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-muted)', padding: '0 2px', lineHeight: 1, fontWeight: 700 }}
+      >ⓘ</button>
+      {show && (
+        <div style={{
+          position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 100, width: 220, background: 'var(--bg-card)',
+          border: '1px solid var(--border)', borderRadius: 10,
+          padding: '10px 12px', boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>{info.title}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: info.good ? 6 : 0 }}>{info.desc}</div>
+          {info.good && (
+            <div style={{ fontSize: 10, background: '#10b98112', border: '1px solid #10b98133', borderRadius: 6, padding: '3px 8px', color: '#10b981', fontWeight: 700, marginTop: 4 }}>✅ {info.good}</div>
+          )}
+          {info.mid && (
+            <div style={{ fontSize: 10, background: '#f59e0b12', border: '1px solid #f59e0b33', borderRadius: 6, padding: '3px 8px', color: '#f59e0b', fontWeight: 700, marginTop: 4 }}>⚠️ {info.mid}</div>
+          )}
+        </div>
+      )}
+    </span>
   );
 }
 
